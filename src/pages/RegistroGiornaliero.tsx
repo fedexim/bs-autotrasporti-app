@@ -22,10 +22,14 @@ export default function RegistroGiornaliero() {
   // 🚚 CARICA MEZZI
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("mezzi")
-        .select("*")
-        .eq("attivo", true);
+        .select("*");
+
+      if (error) {
+        console.error("Errore caricamento mezzi:", error.message);
+        return;
+      }
 
       setMezzi(data || []);
     }
@@ -130,30 +134,39 @@ export default function RegistroGiornaliero() {
         ))}
       </select>
 
-      {/* 🚚 CHECK ALTERNATIVO */}
+      {/* 🚚 TOGGLE ALTERNATIVO */}
       <label style={{ display: "block", marginBottom: 10 }}>
         <input
           type="checkbox"
           checked={usaAlternativo}
           onChange={(e) => setUsaAlternativo(e.target.checked)}
         />
-        {" "}Sto usando un mezzo alternativo
+        {" "}Uso mezzo alternativo
       </label>
 
-      {/* 🚚 MEZZO SECONDARIO */}
+      {/* 🚚 MEZZO SECONDARIO (SELECT O INPUT FALLBACK) */}
       {usaAlternativo && (
-        <select
-          value={targaSecondaria}
-          onChange={(e) => setTargaSecondaria(e.target.value)}
-          style={{ width: "100%", padding: 10, marginBottom: 10 }}
-        >
-          <option value="">Seleziona mezzo alternativo</option>
-          {mezzi.map((m) => (
-            <option key={m.id} value={m.targa}>
-              {m.targa}
-            </option>
-          ))}
-        </select>
+        mezzi.length > 0 ? (
+          <select
+            value={targaSecondaria}
+            onChange={(e) => setTargaSecondaria(e.target.value)}
+            style={{ width: "100%", padding: 10, marginBottom: 10 }}
+          >
+            <option value="">Seleziona mezzo alternativo</option>
+            {mezzi.map((m) => (
+              <option key={m.id} value={m.targa}>
+                {m.targa}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={targaSecondaria}
+            onChange={(e) => setTargaSecondaria(e.target.value)}
+            placeholder="Inserisci targa alternativa"
+            style={{ width: "100%", padding: 10, marginBottom: 10 }}
+          />
+        )
       )}
 
       <input
@@ -185,23 +198,19 @@ export default function RegistroGiornaliero() {
       <br /><br />
 
       {/* 📸 FOTO KM */}
-      <p>📸 Foto contachilometri (opzionale)</p>
+      <p>📸 Foto contachilometri</p>
       <input
         type="file"
         accept="image/*"
-        onChange={(e) =>
-          setFotoKm(e.target.files?.[0] || null)
-        }
+        onChange={(e) => setFotoKm(e.target.files?.[0] || null)}
       />
 
       {/* 📸 SCONTRINO */}
-      <p>⛽ Scontrino carburante (opzionale)</p>
+      <p>⛽ Scontrino carburante</p>
       <input
         type="file"
         accept="image/*"
-        onChange={(e) =>
-          setFotoScontrino(e.target.files?.[0] || null)
-        }
+        onChange={(e) => setFotoScontrino(e.target.files?.[0] || null)}
       />
 
       <br /><br />
