@@ -7,22 +7,41 @@ export default function RegistroGiornaliero() {
   const [litri, setLitri] = useState("");
   const [importo, setImporto] = useState("");
 
-  const [targa, setTarga] = useState<string>("");
+  const [targa, setTarga] = useState("");
+
+  const [usaAlternativo, setUsaAlternativo] = useState(false);
+  const [targaAlternativa, setTargaAlternativa] = useState("");
 
   const [fotoKm, setFotoKm] = useState<File | null>(null);
   const [fotoScontrino, setFotoScontrino] = useState<File | null>(null);
 
   const [msg, setMsg] = useState("");
 
+  // 🚚 LISTA MEZZI
+  const mezziList = [
+    "HB881JF",
+    "HB232JH",
+    "HB866JF",
+    "HB877JF",
+    "HB859JF",
+    "HB882JF",
+    "HB860JF",
+    "HB883JF",
+    "HB869JF",
+    "HB857JF",
+    "HB873JF",
+    "HB862JF",
+    "HB203JH",
+    "GR701EP",
+    "HA141WX"
+  ];
+
   // 🚚 CARICA MEZZO PRINCIPALE DA SUPABASE
   useEffect(() => {
     async function load() {
       const local = JSON.parse(localStorage.getItem("autista") || "{}");
 
-      if (!local.username) {
-        console.log("Nessun utente in localStorage");
-        return;
-      }
+      if (!local.username) return;
 
       const { data, error } = await supabase
         .from("autisti")
@@ -31,13 +50,10 @@ export default function RegistroGiornaliero() {
         .single();
 
       if (error) {
-        console.error("Errore caricamento autista:", error.message);
+        console.error(error.message);
         return;
       }
 
-      console.log("Autista caricato:", data);
-
-      // 🚚 SET DIRETTO DEL MEZZO PRINCIPALE
       setTarga(data?.mezzo_principale || "");
     }
 
@@ -76,8 +92,10 @@ export default function RegistroGiornaliero() {
           username: local.username,
           nome_autista: local.nome,
 
-          // 🚚 SEMPRE DA SUPABASE
-          targa: targa,
+          // 🚚 LOGICA MEZZO PRINCIPALE / ALTERNATIVO
+          targa: usaAlternativo && targaAlternativa
+            ? targaAlternativa
+            : targa,
 
           km_inizio: Number(kmInizio),
           km_fine: Number(kmFine),
@@ -103,6 +121,8 @@ export default function RegistroGiornaliero() {
       setImporto("");
       setFotoKm(null);
       setFotoScontrino(null);
+      setUsaAlternativo(false);
+      setTargaAlternativa("");
 
     } catch (err: any) {
       setMsg("❌ Errore: " + err.message);
@@ -113,11 +133,39 @@ export default function RegistroGiornaliero() {
     <div style={{ padding: 20 }}>
       <h2>🚚 Registro Giornaliero</h2>
 
-      {/* 🚚 MOSTRA SEMPRE MEZZO PRINCIPALE */}
+      {/* 🚚 MEZZO PRINCIPALE */}
       <p>
-        <b>Mezzo assegnato:</b>{" "}
-        {targa ? targa : "❌ Nessun mezzo assegnato"}
+        <b>Mezzo assegnato:</b> {targa || "Caricamento..."}
       </p>
+
+      {/* 🚚 MEZZO ALTERNATIVO */}
+      <div style={{ marginTop: 15 }}>
+        <label>
+          <input
+            type="checkbox"
+            checked={usaAlternativo}
+            onChange={(e) => setUsaAlternativo(e.target.checked)}
+          />
+          {" "}Uso mezzo alternativo
+        </label>
+
+        {usaAlternativo && (
+          <select
+            value={targaAlternativa}
+            onChange={(e) => setTargaAlternativa(e.target.value)}
+            style={{ width: "100%", padding: 10, marginTop: 10 }}
+          >
+            <option value="">Seleziona mezzo alternativo</option>
+            {mezziList.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <br />
 
       <input
         placeholder="Km Inizio"
@@ -147,19 +195,13 @@ export default function RegistroGiornaliero() {
       />
       <br /><br />
 
-      {/* 📸 FOTO KM */}
       <p>📸 Foto contachilometri</p>
-      <input
-        type="file"
-        accept="image/*"
+      <input type="file" accept="image/*"
         onChange={(e) => setFotoKm(e.target.files?.[0] || null)}
       />
 
-      {/* 📸 SCONTRINO */}
       <p>⛽ Scontrino carburante</p>
-      <input
-        type="file"
-        accept="image/*"
+      <input type="file" accept="image/*"
         onChange={(e) => setFotoScontrino(e.target.files?.[0] || null)}
       />
 
