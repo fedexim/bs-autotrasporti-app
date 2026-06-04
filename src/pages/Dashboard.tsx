@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [filtro, setFiltro] = useState("");
   const [dataFiltro, setDataFiltro] = useState("");
 
+  // 🚚 CARICA DATI
   async function carica() {
     setLoading(true);
 
@@ -54,23 +55,51 @@ export default function Dashboard() {
     0
   );
 
-  // 📊 FORMAT EXCEL
-  function formatExcel(data: any[]) {
+  // =========================
+  // 📦 EXPORT BASE
+  // =========================
+  function esportaExcel(nome: string, data: any[]) {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dati");
+    XLSX.writeFile(wb, nome);
+  }
+
+  // =========================
+  // 📊 FORMAT REPORT
+  // =========================
+  function formatReport(data: any[]) {
     return data.map((r) => ({
-      Autista: r.nome_autista || "",
-      Username: r.username || "",
-      Targa: r.targa || "",
+      Autista: r.nome_autista,
+      Username: r.username,
+      Targa: r.targa,
       "Targa Secondaria": r.targa_secondaria || "",
-      "Km Inizio": r.km_inizio || 0,
-      "Km Fine": r.km_fine || 0,
-      "Km Percorsi": (r.km_fine || 0) - (r.km_inizio || 0),
-      "Litri": r.litri || 0,
-      "Importo €": r.importo_carburante || 0,
-      Data: r.data ? new Date(r.data).toLocaleString() : "",
+      "Km Inizio": r.km_inizio,
+      "Km Fine": r.km_fine,
+      "Km Totali": (r.km_fine || 0) - (r.km_inizio || 0),
+      "Litri": r.litri,
+      "Importo €": r.importo_carburante,
+      Data: r.data ? new Date(r.data).toLocaleString() : ""
     }));
   }
 
+  // =========================
+  // ⛽ FORMAT RIFORNIMENTI
+  // =========================
+  function formatRifornimenti(data: any[]) {
+    return data.map((r) => ({
+      Autista: r.nome_autista,
+      Username: r.username,
+      Targa: r.targa,
+      "Litri": r.litri,
+      "Importo €": r.importo_carburante,
+      Data: r.data ? new Date(r.data).toLocaleString() : ""
+    }));
+  }
+
+  // =========================
   // 📤 GIORNALIERO
+  // =========================
   function exportGiornaliero() {
     const oggi = new Date().toISOString().split("T")[0];
 
@@ -79,15 +108,20 @@ export default function Dashboard() {
       return new Date(r.data).toISOString().split("T")[0] === oggi;
     });
 
-    const ws = XLSX.utils.json_to_sheet(formatExcel(giornalieri));
-    const wb = XLSX.utils.book_new();
+    esportaExcel(
+      `REPORT_Giornaliero_${oggi}.xlsx`,
+      formatReport(giornalieri)
+    );
 
-    XLSX.utils.book_append_sheet(wb, ws, "Giornaliero");
-
-    XLSX.writeFile(wb, `Registro_Giornaliero_${oggi}.xlsx`);
+    esportaExcel(
+      `RIFORNIMENTI_Giornaliero_${oggi}.xlsx`,
+      formatRifornimenti(giornalieri)
+    );
   }
 
-  // 📊 MENSILE
+  // =========================
+  // 📅 MENSILE
+  // =========================
   function exportMensile() {
     const now = new Date();
     const mese = now.getMonth();
@@ -99,19 +133,25 @@ export default function Dashboard() {
       return d.getMonth() === mese && d.getFullYear() === anno;
     });
 
-    const ws = XLSX.utils.json_to_sheet(formatExcel(mensili));
-    const wb = XLSX.utils.book_new();
+    esportaExcel(
+      `REPORT_Mensile_${anno}_${mese + 1}.xlsx`,
+      formatReport(mensili)
+    );
 
-    XLSX.utils.book_append_sheet(wb, ws, "Mensile");
-
-    XLSX.writeFile(wb, `Registro_Mensile_${anno}_${mese + 1}.xlsx`);
+    esportaExcel(
+      `RIFORNIMENTI_Mensile_${anno}_${mese + 1}.xlsx`,
+      formatRifornimenti(mensili)
+    );
   }
 
+  // =========================
+  // UI
+  // =========================
   return (
     <div style={{ padding: 20, fontFamily: "Arial" }}>
       <h2>📊 Dashboard Flotta Autotrasporti</h2>
 
-      {/* 🔎 FILTRO TESTO */}
+      {/* 🔎 FILTRO */}
       <input
         placeholder="🔎 Cerca autista o targa..."
         value={filtro}
@@ -119,7 +159,7 @@ export default function Dashboard() {
         style={{ padding: 10, width: "100%", marginBottom: 10 }}
       />
 
-      {/* 📅 FILTRO DATA */}
+      {/* 📅 DATA */}
       <input
         type="date"
         value={dataFiltro}
@@ -136,23 +176,22 @@ export default function Dashboard() {
 
       {/* 📤 EXPORT */}
       <button onClick={exportGiornaliero} style={{ marginRight: 10, padding: 10 }}>
-        📤 Excel Giornaliero
+        📤 Giornaliero (Report + Rifornimenti)
       </button>
 
       <button onClick={exportMensile} style={{ marginRight: 10, padding: 10 }}>
-        📊 Excel Mensile
+        📊 Mensile (Report + Rifornimenti)
       </button>
 
       <button onClick={carica} style={{ padding: 10 }}>
-        🔄 Aggiorna dati
+        🔄 Aggiorna
       </button>
 
       <hr />
 
-      {/* ⏳ LOADING */}
+      {/* 📋 LISTA */}
       {loading && <p>Caricamento...</p>}
 
-      {/* 📋 LISTA */}
       {filtrati.map((r) => (
         <div
           key={r.id}
@@ -163,13 +202,10 @@ export default function Dashboard() {
             borderRadius: 8,
             display: "grid",
             gridTemplateColumns: "4fr 2fr 3fr 1.5fr 2fr",
-            alignItems: "center",
-            gap: 10,
+            gap: 10
           }}
         >
-          <div style={{ fontWeight: "bold" }}>
-            👤 {r.nome_autista}
-          </div>
+          <div><b>👤 {r.nome_autista}</b></div>
 
           <div>
             🚚 {r.targa}
