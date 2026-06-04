@@ -5,14 +5,12 @@ import * as XLSX from "xlsx";
 export default function Dashboard() {
   const [dati, setDati] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [filtro, setFiltro] = useState("");
 
-  const [meseSelezionato, setMeseSelezionato] = useState(
-    new Date().getMonth()
-  );
-  const [annoSelezionato, setAnnoSelezionato] = useState(
-    new Date().getFullYear()
-  );
+  const [giornoSelezionato, setGiornoSelezionato] = useState("");
+  const [meseSelezionato, setMeseSelezionato] = useState(new Date().getMonth());
+  const [annoSelezionato, setAnnoSelezionato] = useState(new Date().getFullYear());
 
   // =========================
   // CARICA DATI
@@ -35,35 +33,28 @@ export default function Dashboard() {
   }, []);
 
   // =========================
-  // FILTRO
+  // FILTRO COMPLETO
   // =========================
   const filtrati = dati.filter((r) => {
-    return (
+    const d = new Date(r.data);
+
+    const matchTesto =
       (r.nome_autista || "").toLowerCase().includes(filtro.toLowerCase()) ||
-      (r.targa || "").toLowerCase().includes(filtro.toLowerCase())
-    );
+      (r.targa || "").toLowerCase().includes(filtro.toLowerCase());
+
+    const matchGiorno = giornoSelezionato
+      ? d.toISOString().split("T")[0] === giornoSelezionato
+      : true;
+
+    const matchMeseAnno =
+      d.getMonth() === meseSelezionato &&
+      d.getFullYear() === annoSelezionato;
+
+    return matchTesto && matchGiorno && matchMeseAnno;
   });
 
   // =========================
-  // TOTALI (USATI NEL JSX → FIX VERCEL)
-  // =========================
-  const totaleKm = filtrati.reduce(
-    (sum, r) => sum + ((r.km_fine || 0) - (r.km_inizio || 0)),
-    0
-  );
-
-  const totaleLitri = filtrati.reduce(
-    (sum, r) => sum + Number(r.litri || 0),
-    0
-  );
-
-  const totaleSpesa = filtrati.reduce(
-    (sum, r) => sum + Number(r.importo_carburante || 0),
-    0
-  );
-
-  // =========================
-  // EXPORT EXCEL
+  // EXCEL
   // =========================
   function esportaExcel(nome: string, data: any[]) {
     const ws = XLSX.utils.json_to_sheet(data);
@@ -77,7 +68,6 @@ export default function Dashboard() {
       Autista: r.nome_autista,
       Targa: r.targa,
       Km: `${r.km_inizio} → ${r.km_fine}`,
-      "Km Totali": (r.km_fine || 0) - (r.km_inizio || 0),
       Litri: r.litri,
       Importo: r.importo_carburante,
       Data: r.data ? new Date(r.data).toLocaleString() : ""
@@ -95,7 +85,7 @@ export default function Dashboard() {
   }
 
   // =========================
-  // EXPORT GIORNO
+  // EXPORT
   // =========================
   function exportGiornaliero() {
     const oggi = new Date().toISOString().split("T")[0];
@@ -104,28 +94,9 @@ export default function Dashboard() {
       (r) => new Date(r.data).toISOString().split("T")[0] === oggi
     );
 
-    esportaExcel(
-      `REPORT_GIORNALIERO_${oggi}.xlsx`,
-      formatReport(dataFiltrata)
-    );
+    esportaExcel("REPORT_GIORNALIERO.xlsx", formatReport(dataFiltrata));
   }
 
-  function exportRifornimentiGiornaliero() {
-    const oggi = new Date().toISOString().split("T")[0];
-
-    const dataFiltrata = dati.filter(
-      (r) => new Date(r.data).toISOString().split("T")[0] === oggi
-    );
-
-    esportaExcel(
-      `RIFORNIMENTI_GIORNALIERO_${oggi}.xlsx`,
-      formatRifornimenti(dataFiltrata)
-    );
-  }
-
-  // =========================
-  // EXPORT MENSILE CUSTOM
-  // =========================
   function exportMensile() {
     const dataFiltrata = dati.filter((r) => {
       const d = new Date(r.data);
@@ -139,6 +110,16 @@ export default function Dashboard() {
       `REPORT_${annoSelezionato}_${meseSelezionato + 1}.xlsx`,
       formatReport(dataFiltrata)
     );
+  }
+
+  function exportRifornimentiGiornaliero() {
+    const oggi = new Date().toISOString().split("T")[0];
+
+    const dataFiltrata = dati.filter(
+      (r) => new Date(r.data).toISOString().split("T")[0] === oggi
+    );
+
+    esportaExcel("RIFORNIMENTI_GIORNALIERI.xlsx", formatRifornimenti(dataFiltrata));
   }
 
   function exportRifornimentiMensile() {
@@ -156,6 +137,25 @@ export default function Dashboard() {
     );
   }
 
+  // =========================
+  // DELETE
+  // =========================
+  async function eliminaReport(id: string) {
+    await supabase.from("registri_giornalieri").delete().eq("id", id);
+    setDati((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  async function eliminaFiltrati() {
+    const ids = filtrati.map((r) => r.id);
+
+    await supabase.from("registri_giornalieri").delete().in("id", ids);
+
+    setDati((prev) => prev.filter((r) => !ids.includes(r.id)));
+  }
+
+  // =========================
+  // UI
+  // =========================
   return (
     <div style={{ padding: 20 }}>
       <h2>📊 Dashboard Flotta</h2>
@@ -168,7 +168,15 @@ export default function Dashboard() {
         style={{ padding: 10, width: "100%", marginBottom: 10 }}
       />
 
-      {/* MESE */}
+      {/* GIORNO */}
+      <input
+        type="date"
+        value={giornoSelezionato}
+        onChange={(e) => setGiornoSelezionato(e.target.value)}
+        style={{ padding: 10, marginBottom: 10 }}
+      />
+
+      {/* MESE ANNO */}
       <div style={{ marginBottom: 10 }}>
         <select
           value={meseSelezionato}
@@ -189,29 +197,21 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 📊 TOTALI (FIX VERCEL) */}
-      <div style={{ background: "#f4f4f4", padding: 10, marginBottom: 10 }}>
-        <p>🚚 Km Totali: <b>{totaleKm}</b></p>
-        <p>⛽ Litri Totali: <b>{totaleLitri}</b></p>
-        <p>💰 Spesa Totale: <b>€ {totaleSpesa.toFixed(2)}</b></p>
-      </div>
-
       {/* BOTTONI */}
-      <button onClick={exportGiornaliero}>📊 Report Giornaliero</button>
-      <button onClick={exportMensile}>📊 Report Mensile</button>
-      <button onClick={exportRifornimentiGiornaliero}>
-        ⛽ Rifornimenti Giorno
-      </button>
-      <button onClick={exportRifornimentiMensile}>
-        ⛽ Rifornimenti Mese
+      <button onClick={exportGiornaliero}>📊 Giornaliero</button>
+      <button onClick={exportMensile}>📊 Mensile</button>
+      <button onClick={exportRifornimentiGiornaliero}>⛽ Riforn. Giorno</button>
+      <button onClick={exportRifornimentiMensile}>⛽ Riforn. Mese</button>
+
+      <button onClick={eliminaFiltrati} style={{ color: "red", marginLeft: 10 }}>
+        🗑 Elimina Filtrati
       </button>
 
       <hr />
 
-      {/* LOADING FIX */}
+      {/* LISTA */}
       {loading && <p>Caricamento...</p>}
 
-      {/* LISTA */}
       {filtrati.map((r) => (
         <div
           key={r.id}
@@ -221,6 +221,15 @@ export default function Dashboard() {
           <br />
           Km: {r.km_inizio} → {r.km_fine} | ⛽ {r.litri}L | €{" "}
           {r.importo_carburante}
+
+          <br />
+
+          <button
+            onClick={() => eliminaReport(r.id)}
+            style={{ background: "red", color: "white", marginTop: 5 }}
+          >
+            🗑 Elimina
+          </button>
         </div>
       ))}
     </div>
