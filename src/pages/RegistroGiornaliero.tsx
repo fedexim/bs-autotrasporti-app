@@ -8,33 +8,37 @@ export default function RegistroGiornaliero() {
   const [importo, setImporto] = useState("");
 
   const [targa, setTarga] = useState("");
-  const [targaSecondaria, setTargaSecondaria] = useState("");
-
-  const [usaAlternativo, setUsaAlternativo] = useState(false);
-
-  const [mezzi, setMezzi] = useState<any[]>([]);
 
   const [fotoKm, setFotoKm] = useState<File | null>(null);
   const [fotoScontrino, setFotoScontrino] = useState<File | null>(null);
 
   const [msg, setMsg] = useState("");
 
-  // 🚚 CARICA MEZZI
+  // 🚚 CARICA AUTISTA + MEZZO PRINCIPALE DA SUPABASE
   useEffect(() => {
-    async function load() {
+    async function loadAutista() {
+      const local = JSON.parse(localStorage.getItem("autista") || "{}");
+
+      if (!local.username) return;
+
       const { data, error } = await supabase
-        .from("mezzi")
-        .select("*");
+        .from("autisti")
+        .select("*")
+        .eq("username", local.username)
+        .single();
 
       if (error) {
-        console.error("Errore caricamento mezzi:", error.message);
+        console.error("Errore autista:", error.message);
         return;
       }
 
-      setMezzi(data || []);
+      // 🚚 SET AUTOMATICO TARGA PRINCIPALE
+      if (data?.mezzo_principale) {
+        setTarga(data.mezzo_principale);
+      }
     }
 
-    load();
+    loadAutista();
   }, []);
 
   // 📸 UPLOAD FILE
@@ -50,37 +54,27 @@ export default function RegistroGiornaliero() {
     return data.path;
   }
 
-  // 🚀 INVIO REGISTRO
+  // 🚀 INVIA REGISTRO
   async function invia() {
     setMsg("⏳ Invio in corso...");
 
     try {
-      if (!targa) {
-        setMsg("❌ Seleziona il mezzo principale");
-        return;
-      }
+      const local = JSON.parse(localStorage.getItem("autista") || "{}");
 
       let urlKm = "";
       let urlScontrino = "";
 
-      if (fotoKm) {
-        urlKm = await uploadFile(fotoKm, "km");
-      }
-
-      if (fotoScontrino) {
-        urlScontrino = await uploadFile(fotoScontrino, "scontrini");
-      }
-
-      const user = JSON.parse(localStorage.getItem("autista") || "{}");
+      if (fotoKm) urlKm = await uploadFile(fotoKm, "km");
+      if (fotoScontrino) urlScontrino = await uploadFile(fotoScontrino, "scontrini");
 
       const { error } = await supabase
         .from("registri_giornalieri")
         .insert({
-          username: user.username,
-          nome_autista: user.nome,
+          username: local.username,
+          nome_autista: local.nome,
 
+          // 🚚 QUI ORA È SEMPRE AUTOMATICO
           targa: targa,
-          targa_secondaria: usaAlternativo ? targaSecondaria : null,
 
           km_inizio: Number(kmInizio),
           km_fine: Number(kmFine),
@@ -100,14 +94,10 @@ export default function RegistroGiornaliero() {
 
       setMsg("✅ Registro salvato!");
 
-      // RESET
       setKmInizio("");
       setKmFine("");
       setLitri("");
       setImporto("");
-      setTarga("");
-      setTargaSecondaria("");
-      setUsaAlternativo(false);
       setFotoKm(null);
       setFotoScontrino(null);
 
@@ -120,54 +110,8 @@ export default function RegistroGiornaliero() {
     <div style={{ padding: 20 }}>
       <h2>🚚 Registro Giornaliero</h2>
 
-      {/* 🚚 MEZZO PRINCIPALE */}
-      <select
-        value={targa}
-        onChange={(e) => setTarga(e.target.value)}
-        style={{ width: "100%", padding: 10, marginBottom: 10 }}
-      >
-        <option value="">Seleziona mezzo principale *</option>
-        {mezzi.map((m) => (
-          <option key={m.id} value={m.targa}>
-            {m.targa}
-          </option>
-        ))}
-      </select>
-
-      {/* 🚚 TOGGLE ALTERNATIVO */}
-      <label style={{ display: "block", marginBottom: 10 }}>
-        <input
-          type="checkbox"
-          checked={usaAlternativo}
-          onChange={(e) => setUsaAlternativo(e.target.checked)}
-        />
-        {" "}Uso mezzo alternativo
-      </label>
-
-      {/* 🚚 MEZZO SECONDARIO (SELECT O INPUT FALLBACK) */}
-      {usaAlternativo && (
-        mezzi.length > 0 ? (
-          <select
-            value={targaSecondaria}
-            onChange={(e) => setTargaSecondaria(e.target.value)}
-            style={{ width: "100%", padding: 10, marginBottom: 10 }}
-          >
-            <option value="">Seleziona mezzo alternativo</option>
-            {mezzi.map((m) => (
-              <option key={m.id} value={m.targa}>
-                {m.targa}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            value={targaSecondaria}
-            onChange={(e) => setTargaSecondaria(e.target.value)}
-            placeholder="Inserisci targa alternativa"
-            style={{ width: "100%", padding: 10, marginBottom: 10 }}
-          />
-        )
-      )}
+      {/* 🚚 TARGA AUTOMATICA (SOLO VISUALIZZAZIONE) */}
+      <p><b>Mezzo assegnato:</b> {targa || "Caricamento..."}</p>
 
       <input
         placeholder="Km Inizio"
@@ -199,17 +143,13 @@ export default function RegistroGiornaliero() {
 
       {/* 📸 FOTO KM */}
       <p>📸 Foto contachilometri</p>
-      <input
-        type="file"
-        accept="image/*"
+      <input type="file" accept="image/*"
         onChange={(e) => setFotoKm(e.target.files?.[0] || null)}
       />
 
       {/* 📸 SCONTRINO */}
       <p>⛽ Scontrino carburante</p>
-      <input
-        type="file"
-        accept="image/*"
+      <input type="file" accept="image/*"
         onChange={(e) => setFotoScontrino(e.target.files?.[0] || null)}
       />
 
