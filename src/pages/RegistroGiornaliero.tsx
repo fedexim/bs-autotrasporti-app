@@ -10,6 +10,8 @@ export default function RegistroGiornaliero() {
   const [targa, setTarga] = useState("");
   const [targaSecondaria, setTargaSecondaria] = useState("");
 
+  const [usaAlternativo, setUsaAlternativo] = useState(false);
+
   const [mezzi, setMezzi] = useState<any[]>([]);
 
   const [fotoKm, setFotoKm] = useState<File | null>(null);
@@ -31,7 +33,7 @@ export default function RegistroGiornaliero() {
     load();
   }, []);
 
-  // 📸 UPLOAD FILE (SAFE)
+  // 📸 UPLOAD FILE
   async function uploadFile(file: File, folder: string) {
     const fileName = `${Date.now()}-${file.name}`;
 
@@ -49,15 +51,18 @@ export default function RegistroGiornaliero() {
     setMsg("⏳ Invio in corso...");
 
     try {
+      if (!targa) {
+        setMsg("❌ Seleziona il mezzo principale");
+        return;
+      }
+
       let urlKm = "";
       let urlScontrino = "";
 
-      // 📸 FOTO KM (NON OBBLIGATORIA)
       if (fotoKm) {
         urlKm = await uploadFile(fotoKm, "km");
       }
 
-      // 📸 SCONTRINO (NON OBBLIGATORIO)
       if (fotoScontrino) {
         urlScontrino = await uploadFile(fotoScontrino, "scontrini");
       }
@@ -71,7 +76,7 @@ export default function RegistroGiornaliero() {
           nome_autista: user.nome,
 
           targa: targa,
-          targa_secondaria: targaSecondaria || null,
+          targa_secondaria: usaAlternativo ? targaSecondaria : null,
 
           km_inizio: Number(kmInizio),
           km_fine: Number(kmFine),
@@ -98,8 +103,10 @@ export default function RegistroGiornaliero() {
       setImporto("");
       setTarga("");
       setTargaSecondaria("");
+      setUsaAlternativo(false);
       setFotoKm(null);
       setFotoScontrino(null);
+
     } catch (err: any) {
       setMsg("❌ Errore: " + err.message);
     }
@@ -109,13 +116,13 @@ export default function RegistroGiornaliero() {
     <div style={{ padding: 20 }}>
       <h2>🚚 Registro Giornaliero</h2>
 
-      {/* 🚚 TARGA PRINCIPALE */}
+      {/* 🚚 MEZZO PRINCIPALE */}
       <select
         value={targa}
         onChange={(e) => setTarga(e.target.value)}
         style={{ width: "100%", padding: 10, marginBottom: 10 }}
       >
-        <option value="">Seleziona mezzo principale</option>
+        <option value="">Seleziona mezzo principale *</option>
         {mezzi.map((m) => (
           <option key={m.id} value={m.targa}>
             {m.targa}
@@ -123,19 +130,31 @@ export default function RegistroGiornaliero() {
         ))}
       </select>
 
-      {/* 🚚 TARGA SECONDARIA */}
-      <select
-        value={targaSecondaria}
-        onChange={(e) => setTargaSecondaria(e.target.value)}
-        style={{ width: "100%", padding: 10, marginBottom: 10 }}
-      >
-        <option value="">Mezzo alternativo (opzionale)</option>
-        {mezzi.map((m) => (
-          <option key={m.id} value={m.targa}>
-            {m.targa}
-          </option>
-        ))}
-      </select>
+      {/* 🚚 CHECK ALTERNATIVO */}
+      <label style={{ display: "block", marginBottom: 10 }}>
+        <input
+          type="checkbox"
+          checked={usaAlternativo}
+          onChange={(e) => setUsaAlternativo(e.target.checked)}
+        />
+        {" "}Sto usando un mezzo alternativo
+      </label>
+
+      {/* 🚚 MEZZO SECONDARIO */}
+      {usaAlternativo && (
+        <select
+          value={targaSecondaria}
+          onChange={(e) => setTargaSecondaria(e.target.value)}
+          style={{ width: "100%", padding: 10, marginBottom: 10 }}
+        >
+          <option value="">Seleziona mezzo alternativo</option>
+          {mezzi.map((m) => (
+            <option key={m.id} value={m.targa}>
+              {m.targa}
+            </option>
+          ))}
+        </select>
+      )}
 
       <input
         placeholder="Km Inizio"
@@ -165,7 +184,7 @@ export default function RegistroGiornaliero() {
       />
       <br /><br />
 
-      {/* 📸 FOTO KM (OPZIONALE) */}
+      {/* 📸 FOTO KM */}
       <p>📸 Foto contachilometri (opzionale)</p>
       <input
         type="file"
