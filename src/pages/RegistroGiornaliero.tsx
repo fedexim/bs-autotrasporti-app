@@ -7,38 +7,41 @@ export default function RegistroGiornaliero() {
   const [litri, setLitri] = useState("");
   const [importo, setImporto] = useState("");
 
-  const [targa, setTarga] = useState("");
+  const [targa, setTarga] = useState<string>("");
 
   const [fotoKm, setFotoKm] = useState<File | null>(null);
   const [fotoScontrino, setFotoScontrino] = useState<File | null>(null);
 
   const [msg, setMsg] = useState("");
 
-  // 🚚 CARICA AUTISTA + MEZZO PRINCIPALE DA SUPABASE
+  // 🚚 CARICA MEZZO PRINCIPALE DA SUPABASE
   useEffect(() => {
-    async function loadAutista() {
+    async function load() {
       const local = JSON.parse(localStorage.getItem("autista") || "{}");
 
-      if (!local.username) return;
+      if (!local.username) {
+        console.log("Nessun utente in localStorage");
+        return;
+      }
 
       const { data, error } = await supabase
         .from("autisti")
-        .select("*")
+        .select("mezzo_principale")
         .eq("username", local.username)
         .single();
 
       if (error) {
-        console.error("Errore autista:", error.message);
+        console.error("Errore caricamento autista:", error.message);
         return;
       }
 
-      // 🚚 SET AUTOMATICO TARGA PRINCIPALE
-      if (data?.mezzo_principale) {
-        setTarga(data.mezzo_principale);
-      }
+      console.log("Autista caricato:", data);
+
+      // 🚚 SET DIRETTO DEL MEZZO PRINCIPALE
+      setTarga(data?.mezzo_principale || "");
     }
 
-    loadAutista();
+    load();
   }, []);
 
   // 📸 UPLOAD FILE
@@ -54,7 +57,7 @@ export default function RegistroGiornaliero() {
     return data.path;
   }
 
-  // 🚀 INVIA REGISTRO
+  // 🚀 INVIO REGISTRO
   async function invia() {
     setMsg("⏳ Invio in corso...");
 
@@ -73,7 +76,7 @@ export default function RegistroGiornaliero() {
           username: local.username,
           nome_autista: local.nome,
 
-          // 🚚 QUI ORA È SEMPRE AUTOMATICO
+          // 🚚 SEMPRE DA SUPABASE
           targa: targa,
 
           km_inizio: Number(kmInizio),
@@ -110,8 +113,11 @@ export default function RegistroGiornaliero() {
     <div style={{ padding: 20 }}>
       <h2>🚚 Registro Giornaliero</h2>
 
-      {/* 🚚 TARGA AUTOMATICA (SOLO VISUALIZZAZIONE) */}
-      <p><b>Mezzo assegnato:</b> {targa || "Caricamento..."}</p>
+      {/* 🚚 MOSTRA SEMPRE MEZZO PRINCIPALE */}
+      <p>
+        <b>Mezzo assegnato:</b>{" "}
+        {targa ? targa : "❌ Nessun mezzo assegnato"}
+      </p>
 
       <input
         placeholder="Km Inizio"
@@ -143,13 +149,17 @@ export default function RegistroGiornaliero() {
 
       {/* 📸 FOTO KM */}
       <p>📸 Foto contachilometri</p>
-      <input type="file" accept="image/*"
+      <input
+        type="file"
+        accept="image/*"
         onChange={(e) => setFotoKm(e.target.files?.[0] || null)}
       />
 
       {/* 📸 SCONTRINO */}
       <p>⛽ Scontrino carburante</p>
-      <input type="file" accept="image/*"
+      <input
+        type="file"
+        accept="image/*"
         onChange={(e) => setFotoScontrino(e.target.files?.[0] || null)}
       />
 
