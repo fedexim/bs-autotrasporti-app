@@ -8,7 +8,9 @@ export default function Dashboard() {
   const [filtro, setFiltro] = useState("");
   const [dataFiltro, setDataFiltro] = useState("");
 
-  // 🚚 CARICA DATI
+  // =========================
+  // 📦 CARICA DATI
+  // =========================
   async function carica() {
     setLoading(true);
 
@@ -26,7 +28,9 @@ export default function Dashboard() {
     carica();
   }, []);
 
+  // =========================
   // 🔎 FILTRI
+  // =========================
   const filtrati = dati.filter((r) => {
     const matchTesto =
       (r.nome_autista || "").toLowerCase().includes(filtro.toLowerCase()) ||
@@ -39,7 +43,9 @@ export default function Dashboard() {
     return matchTesto && matchData;
   });
 
+  // =========================
   // 📊 TOTALI
+  // =========================
   const totaleKm = filtrati.reduce(
     (sum, r) => sum + ((r.km_fine || 0) - (r.km_inizio || 0)),
     0
@@ -56,7 +62,7 @@ export default function Dashboard() {
   );
 
   // =========================
-  // 📦 EXPORT BASE
+  // 📦 EXCEL BASE
   // =========================
   function esportaExcel(nome: string, data: any[]) {
     const ws = XLSX.utils.json_to_sheet(data);
@@ -66,7 +72,7 @@ export default function Dashboard() {
   }
 
   // =========================
-  // 📊 FORMAT REPORT
+  // 📊 FORMAT REPORT COMPLETO
   // =========================
   function formatReport(data: any[]) {
     return data.map((r) => ({
@@ -91,56 +97,83 @@ export default function Dashboard() {
       Autista: r.nome_autista,
       Username: r.username,
       Targa: r.targa,
-      "Litri": r.litri,
+      Litri: r.litri,
       "Importo €": r.importo_carburante,
       Data: r.data ? new Date(r.data).toLocaleString() : ""
     }));
   }
 
   // =========================
-  // 📤 GIORNALIERO
+  // 📤 REPORT GIORNALIERO
   // =========================
-  function exportGiornaliero() {
+  function exportReportGiornaliero() {
     const oggi = new Date().toISOString().split("T")[0];
 
-    const giornalieri = dati.filter((r) => {
+    const datiFiltrati = dati.filter((r) => {
       if (!r.data) return false;
       return new Date(r.data).toISOString().split("T")[0] === oggi;
     });
 
     esportaExcel(
-      `REPORT_Giornaliero_${oggi}.xlsx`,
-      formatReport(giornalieri)
-    );
-
-    esportaExcel(
-      `RIFORNIMENTI_Giornaliero_${oggi}.xlsx`,
-      formatRifornimenti(giornalieri)
+      `REPORT_COMPLETO_GIORNALIERO_${oggi}.xlsx`,
+      formatReport(datiFiltrati)
     );
   }
 
   // =========================
-  // 📅 MENSILE
+  // 📤 REPORT MENSILE
   // =========================
-  function exportMensile() {
+  function exportReportMensile() {
     const now = new Date();
     const mese = now.getMonth();
     const anno = now.getFullYear();
 
-    const mensili = dati.filter((r) => {
+    const datiFiltrati = dati.filter((r) => {
       if (!r.data) return false;
       const d = new Date(r.data);
       return d.getMonth() === mese && d.getFullYear() === anno;
     });
 
     esportaExcel(
-      `REPORT_Mensile_${anno}_${mese + 1}.xlsx`,
-      formatReport(mensili)
+      `REPORT_COMPLETO_MENSILE_${anno}_${mese + 1}.xlsx`,
+      formatReport(datiFiltrati)
     );
+  }
+
+  // =========================
+  // ⛽ RIFORNIMENTI GIORNALIERO
+  // =========================
+  function exportRifornimentiGiornaliero() {
+    const oggi = new Date().toISOString().split("T")[0];
+
+    const datiFiltrati = dati.filter((r) => {
+      if (!r.data) return false;
+      return new Date(r.data).toISOString().split("T")[0] === oggi;
+    });
 
     esportaExcel(
-      `RIFORNIMENTI_Mensile_${anno}_${mese + 1}.xlsx`,
-      formatRifornimenti(mensili)
+      `RIFORNIMENTI_GIORNALIERI_${oggi}.xlsx`,
+      formatRifornimenti(datiFiltrati)
+    );
+  }
+
+  // =========================
+  // ⛽ RIFORNIMENTI MENSILE
+  // =========================
+  function exportRifornimentiMensile() {
+    const now = new Date();
+    const mese = now.getMonth();
+    const anno = now.getFullYear();
+
+    const datiFiltrati = dati.filter((r) => {
+      if (!r.data) return false;
+      const d = new Date(r.data);
+      return d.getMonth() === mese && d.getFullYear() === anno;
+    });
+
+    esportaExcel(
+      `RIFORNIMENTI_MENSILI_${anno}_${mese + 1}.xlsx`,
+      formatRifornimenti(datiFiltrati)
     );
   }
 
@@ -159,7 +192,7 @@ export default function Dashboard() {
         style={{ padding: 10, width: "100%", marginBottom: 10 }}
       />
 
-      {/* 📅 DATA */}
+      {/* 📅 FILTRO DATA */}
       <input
         type="date"
         value={dataFiltro}
@@ -174,17 +207,21 @@ export default function Dashboard() {
         <p>💰 Spesa Totale: <b>€ {totaleSpesa.toFixed(2)}</b></p>
       </div>
 
-      {/* 📤 EXPORT */}
-      <button onClick={exportGiornaliero} style={{ marginRight: 10, padding: 10 }}>
-        📤 Giornaliero (Report + Rifornimenti)
+      {/* 📤 BOTTONI EXPORT */}
+      <button onClick={exportReportGiornaliero} style={{ marginRight: 10, padding: 10 }}>
+        📊 Report Completo Giornaliero
       </button>
 
-      <button onClick={exportMensile} style={{ marginRight: 10, padding: 10 }}>
-        📊 Mensile (Report + Rifornimenti)
+      <button onClick={exportReportMensile} style={{ marginRight: 10, padding: 10 }}>
+        📊 Report Completo Mensile
       </button>
 
-      <button onClick={carica} style={{ padding: 10 }}>
-        🔄 Aggiorna
+      <button onClick={exportRifornimentiGiornaliero} style={{ marginRight: 10, padding: 10 }}>
+        ⛽ Rifornimenti Giornaliero
+      </button>
+
+      <button onClick={exportRifornimentiMensile} style={{ padding: 10 }}>
+        ⛽ Rifornimenti Mensile
       </button>
 
       <hr />
@@ -202,7 +239,7 @@ export default function Dashboard() {
             borderRadius: 8,
             display: "grid",
             gridTemplateColumns: "4fr 2fr 3fr 1.5fr 2fr",
-            gap: 10
+            gap: 10,
           }}
         >
           <div><b>👤 {r.nome_autista}</b></div>
