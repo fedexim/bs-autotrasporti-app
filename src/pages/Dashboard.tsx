@@ -9,8 +9,12 @@ export default function Dashboard() {
   const [filtro, setFiltro] = useState("");
 
   const [giornoSelezionato, setGiornoSelezionato] = useState("");
-  const [meseSelezionato, setMeseSelezionato] = useState(new Date().getMonth());
-  const [annoSelezionato, setAnnoSelezionato] = useState(new Date().getFullYear());
+  const [meseSelezionato, setMeseSelezionato] = useState(
+    new Date().getMonth()
+  );
+  const [annoSelezionato, setAnnoSelezionato] = useState(
+    new Date().getFullYear()
+  );
 
   // =========================
   // CARICA DATI
@@ -33,13 +37,15 @@ export default function Dashboard() {
   }, []);
 
   // =========================
-  // FILTRO COMPLETO
+  // FILTRI
   // =========================
   const filtrati = dati.filter((r) => {
     const d = new Date(r.data);
 
     const matchTesto =
-      (r.nome_autista || "").toLowerCase().includes(filtro.toLowerCase()) ||
+      (r.nome_autista || "")
+        .toLowerCase()
+        .includes(filtro.toLowerCase()) ||
       (r.targa || "").toLowerCase().includes(filtro.toLowerCase());
 
     const matchGiorno = giornoSelezionato
@@ -59,7 +65,9 @@ export default function Dashboard() {
   function esportaExcel(nome: string, data: any[]) {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
+
     XLSX.utils.book_append_sheet(wb, ws, "Dati");
+
     XLSX.writeFile(wb, nome);
   }
 
@@ -70,7 +78,9 @@ export default function Dashboard() {
       Km: `${r.km_inizio} → ${r.km_fine}`,
       Litri: r.litri,
       Importo: r.importo_carburante,
-      Data: r.data ? new Date(r.data).toLocaleString() : ""
+      Data: r.data
+        ? new Date(r.data).toLocaleString("it-IT")
+        : ""
     }));
   }
 
@@ -80,51 +90,40 @@ export default function Dashboard() {
       Targa: r.targa,
       Litri: r.litri,
       Importo: r.importo_carburante,
-      Data: r.data ? new Date(r.data).toLocaleString() : ""
+      Data: r.data
+        ? new Date(r.data).toLocaleString("it-IT")
+        : ""
     }));
   }
 
   // =========================
-  // EXPORT
+  // EXPORT REPORT GIORNO
   // =========================
   function exportGiornaliero() {
-    const oggi = new Date().toISOString().split("T")[0];
+    if (!giornoSelezionato) {
+      alert("Seleziona una data");
+      return;
+    }
 
     const dataFiltrata = dati.filter(
-      (r) => new Date(r.data).toISOString().split("T")[0] === oggi
+      (r) =>
+        new Date(r.data).toISOString().split("T")[0] ===
+        giornoSelezionato
     );
 
-    esportaExcel("REPORT_GIORNALIERO.xlsx", formatReport(dataFiltrata));
-  }
-
-  function exportMensile() {
-    const dataFiltrata = dati.filter((r) => {
-      const d = new Date(r.data);
-      return (
-        d.getMonth() === meseSelezionato &&
-        d.getFullYear() === annoSelezionato
-      );
-    });
-
     esportaExcel(
-      `REPORT_${annoSelezionato}_${meseSelezionato + 1}.xlsx`,
+      `REPORT_${giornoSelezionato}.xlsx`,
       formatReport(dataFiltrata)
     );
   }
 
-  function exportRifornimentiGiornaliero() {
-    const oggi = new Date().toISOString().split("T")[0];
-
-    const dataFiltrata = dati.filter(
-      (r) => new Date(r.data).toISOString().split("T")[0] === oggi
-    );
-
-    esportaExcel("RIFORNIMENTI_GIORNALIERI.xlsx", formatRifornimenti(dataFiltrata));
-  }
-
-  function exportRifornimentiMensile() {
+  // =========================
+  // EXPORT REPORT MESE
+  // =========================
+  function exportMensile() {
     const dataFiltrata = dati.filter((r) => {
       const d = new Date(r.data);
+
       return (
         d.getMonth() === meseSelezionato &&
         d.getFullYear() === annoSelezionato
@@ -132,25 +131,87 @@ export default function Dashboard() {
     });
 
     esportaExcel(
-      `RIFORNIMENTI_${annoSelezionato}_${meseSelezionato + 1}.xlsx`,
+      `REPORT_${annoSelezionato}_${String(
+        meseSelezionato + 1
+      ).padStart(2, "0")}.xlsx`,
+      formatReport(dataFiltrata)
+    );
+  }
+
+  // =========================
+  // EXPORT RIFORNIMENTI GIORNO
+  // =========================
+  function exportRifornimentiGiornaliero() {
+    if (!giornoSelezionato) {
+      alert("Seleziona una data");
+      return;
+    }
+
+    const dataFiltrata = dati.filter(
+      (r) =>
+        new Date(r.data).toISOString().split("T")[0] ===
+        giornoSelezionato
+    );
+
+    esportaExcel(
+      `RIFORNIMENTI_${giornoSelezionato}.xlsx`,
       formatRifornimenti(dataFiltrata)
     );
   }
 
   // =========================
-  // DELETE
+  // EXPORT RIFORNIMENTI MESE
+  // =========================
+  function exportRifornimentiMensile() {
+    const dataFiltrata = dati.filter((r) => {
+      const d = new Date(r.data);
+
+      return (
+        d.getMonth() === meseSelezionato &&
+        d.getFullYear() === annoSelezionato
+      );
+    });
+
+    esportaExcel(
+      `RIFORNIMENTI_${annoSelezionato}_${String(
+        meseSelezionato + 1
+      ).padStart(2, "0")}.xlsx`,
+      formatRifornimenti(dataFiltrata)
+    );
+  }
+
+  // =========================
+  // ELIMINA REPORT
   // =========================
   async function eliminaReport(id: string) {
-    await supabase.from("registri_giornalieri").delete().eq("id", id);
-    setDati((prev) => prev.filter((r) => r.id !== id));
+    await supabase
+      .from("registri_giornalieri")
+      .delete()
+      .eq("id", id);
+
+    setDati((prev) =>
+      prev.filter((r) => r.id !== id)
+    );
   }
 
   async function eliminaFiltrati() {
+    if (
+      !window.confirm(
+        `Eliminare ${filtrati.length} record?`
+      )
+    )
+      return;
+
     const ids = filtrati.map((r) => r.id);
 
-    await supabase.from("registri_giornalieri").delete().in("id", ids);
+    await supabase
+      .from("registri_giornalieri")
+      .delete()
+      .in("id", ids);
 
-    setDati((prev) => prev.filter((r) => !ids.includes(r.id)));
+    setDati((prev) =>
+      prev.filter((r) => !ids.includes(r.id))
+    );
   }
 
   // =========================
@@ -160,31 +221,60 @@ export default function Dashboard() {
     <div style={{ padding: 20 }}>
       <h2>📊 Dashboard Flotta</h2>
 
-      {/* FILTRO */}
       <input
         placeholder="Cerca autista o targa"
         value={filtro}
-        onChange={(e) => setFiltro(e.target.value)}
-        style={{ padding: 10, width: "100%", marginBottom: 10 }}
+        onChange={(e) =>
+          setFiltro(e.target.value)
+        }
+        style={{
+          padding: 10,
+          width: "100%",
+          marginBottom: 10
+        }}
       />
 
-      {/* GIORNO */}
-      <input
-        type="date"
-        value={giornoSelezionato}
-        onChange={(e) => setGiornoSelezionato(e.target.value)}
-        style={{ padding: 10, marginBottom: 10 }}
-      />
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          marginBottom: 15,
+          flexWrap: "wrap"
+        }}
+      >
+        <input
+          type="date"
+          value={giornoSelezionato}
+          onChange={(e) =>
+            setGiornoSelezionato(e.target.value)
+          }
+        />
 
-      {/* MESE ANNO */}
-      <div style={{ marginBottom: 10 }}>
         <select
           value={meseSelezionato}
-          onChange={(e) => setMeseSelezionato(Number(e.target.value))}
+          onChange={(e) =>
+            setMeseSelezionato(
+              Number(e.target.value)
+            )
+          }
         >
-          {Array.from({ length: 12 }).map((_, i) => (
+          {[
+            "Gennaio",
+            "Febbraio",
+            "Marzo",
+            "Aprile",
+            "Maggio",
+            "Giugno",
+            "Luglio",
+            "Agosto",
+            "Settembre",
+            "Ottobre",
+            "Novembre",
+            "Dicembre"
+          ].map((mese, i) => (
             <option key={i} value={i}>
-              Mese {i + 1}
+              {mese}
             </option>
           ))}
         </select>
@@ -192,41 +282,84 @@ export default function Dashboard() {
         <input
           type="number"
           value={annoSelezionato}
-          onChange={(e) => setAnnoSelezionato(Number(e.target.value))}
-          style={{ marginLeft: 10, width: 100 }}
+          onChange={(e) =>
+            setAnnoSelezionato(
+              Number(e.target.value)
+            )
+          }
+          style={{ width: 100 }}
         />
       </div>
 
-      {/* BOTTONI */}
-      <button onClick={exportGiornaliero}>📊 Giornaliero</button>
-      <button onClick={exportMensile}>📊 Mensile</button>
-      <button onClick={exportRifornimentiGiornaliero}>⛽ Riforn. Giorno</button>
-      <button onClick={exportRifornimentiMensile}>⛽ Riforn. Mese</button>
+      <button onClick={exportGiornaliero}>
+        📊 Giornaliero
+      </button>
 
-      <button onClick={eliminaFiltrati} style={{ color: "red", marginLeft: 10 }}>
+      <button
+        onClick={exportMensile}
+        style={{ marginLeft: 5 }}
+      >
+        📊 Mensile
+      </button>
+
+      <button
+        onClick={exportRifornimentiGiornaliero}
+        style={{ marginLeft: 5 }}
+      >
+        ⛽ Riforn. Giorno
+      </button>
+
+      <button
+        onClick={exportRifornimentiMensile}
+        style={{ marginLeft: 5 }}
+      >
+        ⛽ Riforn. Mese
+      </button>
+
+      <button
+        onClick={eliminaFiltrati}
+        style={{
+          color: "red",
+          marginLeft: 10
+        }}
+      >
         🗑 Elimina Filtrati
       </button>
 
       <hr />
 
-      {/* LISTA */}
       {loading && <p>Caricamento...</p>}
 
       {filtrati.map((r) => (
         <div
           key={r.id}
-          style={{ padding: 10, border: "1px solid #ddd", marginBottom: 8 }}
+          style={{
+            padding: 10,
+            border: "1px solid #ddd",
+            marginBottom: 8
+          }}
         >
           <b>{r.nome_autista}</b> - {r.targa}
+
           <br />
-          Km: {r.km_inizio} → {r.km_fine} | ⛽ {r.litri}L | €{" "}
-          {r.importo_carburante}
+
+          Km: {r.km_inizio} → {r.km_fine}
+          {" | "}
+          ⛽ {r.litri}L
+          {" | "}
+          € {r.importo_carburante}
 
           <br />
 
           <button
-            onClick={() => eliminaReport(r.id)}
-            style={{ background: "red", color: "white", marginTop: 5 }}
+            onClick={() =>
+              eliminaReport(r.id)
+            }
+            style={{
+              background: "red",
+              color: "white",
+              marginTop: 5
+            }}
           >
             🗑 Elimina
           </button>
