@@ -4,6 +4,8 @@ import { supabase } from "../services/supabase";
 export default function RegistroGiornaliero() {
   const [kmInizio, setKmInizio] = useState("");
   const [kmFine, setKmFine] = useState("");
+  const [kmRifornimento, setKmRifornimento] = useState("");
+
   const [litri, setLitri] = useState("");
   const [importo, setImporto] = useState("");
 
@@ -75,6 +77,54 @@ export default function RegistroGiornaliero() {
 
   // 🚀 INVIO REGISTRO
   async function invia() {
+    // VALIDAZIONI
+
+    if (!kmInizio.trim()) {
+      setMsg("❌ Inserire i Km Inizio");
+      return;
+    }
+
+    if (!kmFine.trim()) {
+      setMsg("❌ Inserire i Km Fine");
+      return;
+    }
+
+    if (Number(kmFine) <= Number(kmInizio)) {
+      setMsg("❌ I Km Fine devono essere maggiori dei Km Inizio");
+      return;
+    }
+
+    if (usaAlternativo && !targaAlternativa) {
+      setMsg("❌ Selezionare il mezzo alternativo");
+      return;
+    }
+
+    const rifornimento =
+      litri.trim() !== "" ||
+      importo.trim() !== "";
+
+    if (rifornimento) {
+      if (!kmRifornimento.trim()) {
+        setMsg("❌ Inserire i Km al momento del rifornimento");
+        return;
+      }
+
+      if (!fotoScontrino) {
+        setMsg("❌ Caricare lo scontrino carburante");
+        return;
+      }
+
+      if (
+        Number(kmRifornimento) < Number(kmInizio) ||
+        Number(kmRifornimento) > Number(kmFine)
+      ) {
+        setMsg(
+          "❌ I Km del rifornimento devono essere compresi tra Km Inizio e Km Fine"
+        );
+        return;
+      }
+    }
+
     setMsg("⏳ Invio in corso...");
 
     try {
@@ -83,8 +133,16 @@ export default function RegistroGiornaliero() {
       let urlKm = "";
       let urlScontrino = "";
 
-      if (fotoKm) urlKm = await uploadFile(fotoKm, "km");
-      if (fotoScontrino) urlScontrino = await uploadFile(fotoScontrino, "scontrini");
+      if (fotoKm) {
+        urlKm = await uploadFile(fotoKm, "km");
+      }
+
+      if (fotoScontrino) {
+        urlScontrino = await uploadFile(
+          fotoScontrino,
+          "scontrini"
+        );
+      }
 
       const { error } = await supabase
         .from("registri_giornalieri")
@@ -92,15 +150,28 @@ export default function RegistroGiornaliero() {
           username: local.username,
           nome_autista: local.nome,
 
-          // 🚚 LOGICA MEZZO PRINCIPALE / ALTERNATIVO
-          targa: usaAlternativo && targaAlternativa
-            ? targaAlternativa
-            : targa,
+          targa:
+            usaAlternativo && targaAlternativa
+              ? targaAlternativa
+              : targa,
 
           km_inizio: Number(kmInizio),
           km_fine: Number(kmFine),
-          litri: Number(litri),
-          importo_carburante: Number(importo),
+
+          km_rifornimento:
+            kmRifornimento.trim() !== ""
+              ? Number(kmRifornimento)
+              : null,
+
+          litri:
+            litri.trim() !== ""
+              ? Number(litri)
+              : null,
+
+          importo_carburante:
+            importo.trim() !== ""
+              ? Number(importo)
+              : null,
 
           foto_km: urlKm || null,
           foto_scontrino: urlScontrino || null,
@@ -117,10 +188,13 @@ export default function RegistroGiornaliero() {
 
       setKmInizio("");
       setKmFine("");
+      setKmRifornimento("");
       setLitri("");
       setImporto("");
+
       setFotoKm(null);
       setFotoScontrino(null);
+
       setUsaAlternativo(false);
       setTargaAlternativa("");
 
@@ -133,18 +207,19 @@ export default function RegistroGiornaliero() {
     <div style={{ padding: 20 }}>
       <h2>🚚 Registro Giornaliero</h2>
 
-      {/* 🚚 MEZZO PRINCIPALE */}
       <p>
-        <b>Mezzo assegnato:</b> {targa || "Caricamento..."}
+        <b>Mezzo assegnato:</b>{" "}
+        {targa || "Caricamento..."}
       </p>
 
-      {/* 🚚 MEZZO ALTERNATIVO */}
       <div style={{ marginTop: 15 }}>
         <label>
           <input
             type="checkbox"
             checked={usaAlternativo}
-            onChange={(e) => setUsaAlternativo(e.target.checked)}
+            onChange={(e) =>
+              setUsaAlternativo(e.target.checked)
+            }
           />
           {" "}Uso mezzo alternativo
         </label>
@@ -152,10 +227,19 @@ export default function RegistroGiornaliero() {
         {usaAlternativo && (
           <select
             value={targaAlternativa}
-            onChange={(e) => setTargaAlternativa(e.target.value)}
-            style={{ width: "100%", padding: 10, marginTop: 10 }}
+            onChange={(e) =>
+              setTargaAlternativa(e.target.value)
+            }
+            style={{
+              width: "100%",
+              padding: 10,
+              marginTop: 10
+            }}
           >
-            <option value="">Seleziona mezzo alternativo</option>
+            <option value="">
+              Seleziona mezzo alternativo
+            </option>
+
             {mezziList.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -168,46 +252,89 @@ export default function RegistroGiornaliero() {
       <br />
 
       <input
+        type="number"
         placeholder="Km Inizio"
         value={kmInizio}
         onChange={(e) => setKmInizio(e.target.value)}
       />
-      <br /><br />
+
+      <br />
+      <br />
 
       <input
+        type="number"
         placeholder="Km Fine"
         value={kmFine}
         onChange={(e) => setKmFine(e.target.value)}
       />
-      <br /><br />
+
+      <br />
+      <br />
 
       <input
+        type="number"
         placeholder="Litri carburante"
         value={litri}
         onChange={(e) => setLitri(e.target.value)}
       />
-      <br /><br />
+
+      <br />
+      <br />
 
       <input
-        placeholder="Importo carburante"
+        type="number"
+        step="0.01"
+        placeholder="Importo carburante (€)"
         value={importo}
         onChange={(e) => setImporto(e.target.value)}
       />
-      <br /><br />
+
+      <br />
+      <br />
+
+      <input
+        type="number"
+        placeholder="Km al momento del rifornimento"
+        value={kmRifornimento}
+        onChange={(e) =>
+          setKmRifornimento(e.target.value)
+        }
+      />
+
+      <br />
+      <br />
 
       <p>📸 Foto contachilometri</p>
-      <input type="file" accept="image/*"
-        onChange={(e) => setFotoKm(e.target.files?.[0] || null)}
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) =>
+          setFotoKm(
+            e.target.files?.[0] || null
+          )
+        }
       />
 
       <p>⛽ Scontrino carburante</p>
-      <input type="file" accept="image/*"
-        onChange={(e) => setFotoScontrino(e.target.files?.[0] || null)}
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) =>
+          setFotoScontrino(
+            e.target.files?.[0] || null
+          )
+        }
       />
 
-      <br /><br />
+      <br />
+      <br />
 
-      <button onClick={invia} style={{ padding: 10 }}>
+      <button
+        onClick={invia}
+        style={{ padding: 10 }}
+      >
         🚀 Invia Registro
       </button>
 
