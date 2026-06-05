@@ -5,6 +5,7 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const login = async () => {
     setMsg("");
@@ -13,6 +14,8 @@ export default function Login() {
       setMsg("❌ Inserisci username e password");
       return;
     }
+
+    setLoading(true);
 
     try {
       const { data, error } = await supabase
@@ -23,11 +26,13 @@ export default function Login() {
 
       if (error) {
         setMsg("❌ Errore server: " + error.message);
+        setLoading(false);
         return;
       }
 
       if (!data || data.length === 0) {
         setMsg("❌ Utente non trovato");
+        setLoading(false);
         return;
       }
 
@@ -35,10 +40,10 @@ export default function Login() {
 
       if (user.password !== password.trim()) {
         setMsg("❌ Password errata");
+        setLoading(false);
         return;
       }
 
-      // salva sessione
       localStorage.setItem(
         "autista",
         JSON.stringify({
@@ -50,42 +55,103 @@ export default function Login() {
 
       setMsg("✅ Login effettuato");
 
-      // opzionale: refresh pagina o redirect
       setTimeout(() => {
         window.location.href = "/";
       }, 500);
     } catch (err: any) {
       setMsg("❌ Errore: " + err.message);
     }
+
+    setLoading(false);
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 400 }}>
-      <h2>🚚 Login Autisti</h2>
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <img src="/logo.png" alt="Logo aziendale" style={styles.logo} />
 
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        style={{ width: "100%", padding: 10, marginBottom: 10 }}
-      />
+        <h2 style={styles.title}>Login Autisti</h2>
+        <p style={styles.subtitle}>Accedi al gestionale consegne</p>
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        style={{ width: "100%", padding: 10, marginBottom: 10 }}
-      />
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          style={styles.input}
+        />
 
-      <button onClick={login} style={{ padding: 10, width: "100%" }}>
-        🔐 Accedi
-      </button>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={styles.input}
+        />
 
-      <p style={{ marginTop: 10 }}>{msg}</p>
+        <button onClick={login} style={styles.button} disabled={loading}>
+          {loading ? "⏳ Accesso..." : "🔐 Accedi"}
+        </button>
+
+        {msg && <p style={styles.msg}>{msg}</p>}
+      </div>
     </div>
   );
 }
-console.log("URL:", import.meta.env.VITE_SUPABASE_URL);
-console.log("KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+const styles: any = {
+  page: {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #0f172a, #1e293b)",
+    fontFamily: "Arial",
+  },
+  card: {
+    width: "100%",
+    maxWidth: 380,
+    background: "#ffffff",
+    padding: 30,
+    borderRadius: 16,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+    textAlign: "center",
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    objectFit: "contain",
+    marginBottom: 10,
+  },
+  title: {
+    marginBottom: 5,
+  },
+  subtitle: {
+    marginBottom: 20,
+    fontSize: 13,
+    color: "#666",
+  },
+  input: {
+    width: "100%",
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+    outline: "none",
+    fontSize: 14,
+  },
+  button: {
+    width: "100%",
+    padding: 12,
+    borderRadius: 8,
+    border: "none",
+    background: "#2563eb",
+    color: "white",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  msg: {
+    marginTop: 12,
+    fontSize: 13,
+  },
+};
