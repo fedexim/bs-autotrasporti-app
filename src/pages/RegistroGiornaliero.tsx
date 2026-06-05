@@ -19,10 +19,23 @@ export default function RegistroGiornaliero() {
 
   const [msg, setMsg] = useState("");
 
+  // ✔ USATO CORRETTAMENTE (fix TS6133)
   const mezziList = [
-    "HB881JF","HB232JH","HB866JF","HB877JF","HB859JF",
-    "HB882JF","HB860JF","HB883JF","HB869JF","HB857JF",
-    "HB873JF","HB862JF","HB203JH","GR701EP","HA141WX",
+    "HB881JF",
+    "HB232JH",
+    "HB866JF",
+    "HB877JF",
+    "HB859JF",
+    "HB882JF",
+    "HB860JF",
+    "HB883JF",
+    "HB869JF",
+    "HB857JF",
+    "HB873JF",
+    "HB862JF",
+    "HB203JH",
+    "GR701EP",
+    "HA141WX",
   ];
 
   useEffect(() => {
@@ -31,15 +44,13 @@ export default function RegistroGiornaliero() {
 
       if (!local.username) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("autisti")
         .select("mezzo_principale")
         .eq("username", local.username)
         .single();
 
-      if (!error) {
-        setTarga(data?.mezzo_principale || "");
-      }
+      setTarga(data?.mezzo_principale || "");
     }
 
     load();
@@ -60,27 +71,25 @@ export default function RegistroGiornaliero() {
   async function invia() {
     setMsg("");
 
-    // ❗ KM INIZIO OBBLIGATORIO
+    // 🚚 KM INIZIO OBBLIGATORIO
     if (!kmInizio.trim()) {
       setMsg("❌ Inserire i Km Inizio");
       return;
     }
 
-    // ❗ KM FINE OBBLIGATORIO
+    // 🚚 KM FINE OBBLIGATORIO
     if (!kmFine.trim()) {
       setMsg("❌ Inserire i Km Fine");
       return;
     }
 
-    // ❗ VALIDAZIONE KM
     if (Number(kmFine) <= Number(kmInizio)) {
-      setMsg("❌ I Km Fine devono essere maggiori dei Km Inizio");
+      setMsg("❌ Km Fine deve essere maggiore di Km Inizio");
       return;
     }
 
-    // ❗ MEZZO ALTERNATIVO
     if (usaAlternativo && !targaAlternativa) {
-      setMsg("❌ Selezionare il mezzo alternativo");
+      setMsg("❌ Selezionare mezzo alternativo");
       return;
     }
 
@@ -88,21 +97,20 @@ export default function RegistroGiornaliero() {
     const haImporto = importo.trim() !== "";
     const rifornimento = haLitri || haImporto;
 
-    // ❗ se uno solo compilato
     if (haLitri !== haImporto) {
-      setMsg("❌ Inserire sia litri che importo carburante");
+      setMsg("❌ Inserire sia litri che importo");
       return;
     }
 
     // ⛽ BLOCCO RIFORNIMENTO
     if (rifornimento) {
       if (!kmRifornimento.trim()) {
-        setMsg("❌ Inserire i Km al momento del rifornimento");
+        setMsg("❌ Inserire Km rifornimento");
         return;
       }
 
       if (!fotoScontrino) {
-        setMsg("❌ Caricare lo scontrino carburante");
+        setMsg("❌ Caricare scontrino carburante");
         return;
       }
 
@@ -110,7 +118,7 @@ export default function RegistroGiornaliero() {
         Number(kmRifornimento) < Number(kmInizio) ||
         Number(kmRifornimento) > Number(kmFine)
       ) {
-        setMsg("❌ Km rifornimento non validi");
+        setMsg("❌ Km rifornimento non valido");
         return;
       }
     }
@@ -123,7 +131,7 @@ export default function RegistroGiornaliero() {
       let urlKm = "";
       let urlScontrino = "";
 
-      // 📸 FOTO KM = SEMPRE OPZIONALE
+      // 📸 FOTO KM SEMPRE OPZIONALE
       if (fotoKm) {
         urlKm = await uploadFile(fotoKm, "km");
       }
@@ -165,6 +173,7 @@ export default function RegistroGiornaliero() {
 
       setMsg("✅ Registro salvato correttamente");
 
+      // reset
       setKmInizio("");
       setKmFine("");
       setKmRifornimento("");
@@ -186,6 +195,22 @@ export default function RegistroGiornaliero() {
       <p>
         <b>Mezzo assegnato:</b> {targa || "Caricamento..."}
       </p>
+
+      {usaAlternativo && (
+        <select
+          value={targaAlternativa}
+          onChange={(e) => setTargaAlternativa(e.target.value)}
+        >
+          <option value="">Seleziona mezzo alternativo</option>
+          {mezziList.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <br /><br />
 
       <input
         type="number"
@@ -217,7 +242,7 @@ export default function RegistroGiornaliero() {
       <input
         type="number"
         step="0.01"
-        placeholder="Importo carburante (€)"
+        placeholder="Importo carburante"
         value={importo}
         onChange={(e) => setImporto(e.target.value)}
       />
@@ -237,18 +262,14 @@ export default function RegistroGiornaliero() {
       <input
         type="file"
         accept="image/*"
-        onChange={(e) =>
-          setFotoKm(e.target.files?.[0] || null)
-        }
+        onChange={(e) => setFotoKm(e.target.files?.[0] || null)}
       />
 
       <p>⛽ Scontrino carburante (OBBLIGATORIO se rifornimento)</p>
       <input
         type="file"
         accept="image/*"
-        onChange={(e) =>
-          setFotoScontrino(e.target.files?.[0] || null)
-        }
+        onChange={(e) => setFotoScontrino(e.target.files?.[0] || null)}
       />
 
       <br /><br />
