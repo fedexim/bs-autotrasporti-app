@@ -86,6 +86,7 @@ export default function Dashboard() {
   // 📊 REPORT GIORNALIERO
   function exportGiornaliero() {
     const data = filtrati.map((r) => ({
+      Data: r.data ? new Date(r.data).toLocaleString("it-IT") : "-",
       Autista: r.nome_autista,
       Targa: r.targa,
       "Km Inizio": r.km_inizio,
@@ -102,6 +103,7 @@ export default function Dashboard() {
   // 📅 REPORT MENSILE
   function exportMensile() {
     const data = filtrati.map((r) => ({
+      Data: r.data ? new Date(r.data).toLocaleString("it-IT") : "-",
       Autista: r.nome_autista,
       Targa: r.targa,
       "Km Inizio": r.km_inizio,
@@ -120,6 +122,7 @@ export default function Dashboard() {
     const data = filtrati
       .filter((r) => r.litri || r.importo_carburante)
       .map((r) => ({
+        Data: r.data ? new Date(r.data).toLocaleString("it-IT") : "-",
         Autista: r.nome_autista,
         Targa: r.targa,
         "Km Rifornimento": r.km_rifornimento,
@@ -135,6 +138,7 @@ export default function Dashboard() {
     const data = filtrati
       .filter((r) => r.litri || r.importo_carburante)
       .map((r) => ({
+        Data: r.data ? new Date(r.data).toLocaleString("it-IT") : "-",
         Autista: r.nome_autista,
         Targa: r.targa,
         "Km Rifornimento": r.km_rifornimento,
@@ -253,7 +257,7 @@ export default function Dashboard() {
           <br />
           💶 € {r.importo_carburante || 0}
           <br />
-          📅 {r.data ? new Date(r.data).toLocaleString() : "-"}
+          📅 {r.data ? new Date(r.data).toLocaleString("it-IT") : "-"}
           <br />
 
           <button
