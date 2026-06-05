@@ -9,16 +9,13 @@ export default function Dashboard() {
   const [filtro, setFiltro] = useState("");
 
   const [giornoSelezionato, setGiornoSelezionato] = useState("");
-  const [meseSelezionato, setMeseSelezionato] = useState(new Date().getMonth());
-  const [annoSelezionato, setAnnoSelezionato] = useState(new Date().getFullYear());
+  const [meseSelezionato, setMeseSelezionato] = useState(
+    new Date().getMonth()
+  );
+  const [annoSelezionato, setAnnoSelezionato] = useState(
+    new Date().getFullYear()
+  );
 
-  // NUOVI CAMPI
-  const [kmRifornimento, setKmRifornimento] = useState("");
-  const [foto, setFoto] = useState<File | null>(null);
-
-  // =========================
-  // CARICA DATI
-  // =========================
   async function carica() {
     setLoading(true);
 
@@ -36,15 +33,16 @@ export default function Dashboard() {
     carica();
   }, []);
 
-  // =========================
-  // FILTRO
-  // =========================
   const filtrati = dati.filter((r) => {
     const d = new Date(r.data);
 
     const matchTesto =
-      (r.nome_autista || "").toLowerCase().includes(filtro.toLowerCase()) ||
-      (r.targa || "").toLowerCase().includes(filtro.toLowerCase());
+      (r.nome_autista || "")
+        .toLowerCase()
+        .includes(filtro.toLowerCase()) ||
+      (r.targa || "")
+        .toLowerCase()
+        .includes(filtro.toLowerCase());
 
     const matchGiorno = giornoSelezionato
       ? d.toISOString().split("T")[0] === giornoSelezionato
@@ -57,165 +55,182 @@ export default function Dashboard() {
     return matchTesto && matchGiorno && matchMeseAnno;
   });
 
-  // =========================
-  // EXCEL
-  // =========================
+  const kmTotali = filtrati.reduce(
+    (acc, r) =>
+      acc +
+      (Number(r.km_percorsi) ||
+        Number(r.km_fine || 0) -
+          Number(r.km_inizio || 0)),
+    0
+  );
+
+  const litriTotali = filtrati.reduce(
+    (acc, r) => acc + Number(r.litri || 0),
+    0
+  );
+
+  const spesaTotale = filtrati.reduce(
+    (acc, r) => acc + Number(r.importo_carburante || 0),
+    0
+  );
+
+  const consumoMedio =
+    litriTotali > 0
+      ? (kmTotali / litriTotali).toFixed(2)
+      : "0";
+
   function esportaExcel(nome: string, data: any[]) {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Dati");
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      "Report"
+    );
+
     XLSX.writeFile(wb, nome);
   }
 
-  function formatReport(data: any[]) {
-    return data.map((r) => ({
-      Autista: r.nome_autista,
-      Targa: r.targa,
-      "Km Inizio": r.km_inizio,
-      "Km Fine": r.km_fine,
-      "Km Rifornimento": r.km_rifornimento,
-      Litri: r.litri,
-      Importo: r.importo_carburante,
-      Data: r.data ? new Date(r.data).toLocaleString() : ""
-    }));
-  }
-
-  function formatRifornimenti(data: any[]) {
-    return data.map((r) => ({
-      Autista: r.nome_autista,
-      Targa: r.targa,
-      Km: r.km_rifornimento,
-      Litri: r.litri,
-      Importo: r.importo_carburante,
-      Data: r.data ? new Date(r.data).toLocaleString() : ""
-    }));
-  }
-
-  // =========================
-  // VALIDAZIONE (OBBLIGO CAMPI)
-  // =========================
-  function validaInvio(rifornimento: any) {
-    const isRifornimento = Number(rifornimento.litri) > 0;
-
-    if (
-      !rifornimento.nome_autista ||
-      !rifornimento.targa ||
-      !rifornimento.km_inizio ||
-      !rifornimento.km_fine
-    ) {
-      alert("Compila tutti i campi obbligatori");
-      return false;
-    }
-
-    if (isRifornimento && !rifornimento.km_rifornimento) {
-      alert("Inserisci i km al rifornimento");
-      return false;
-    }
-
-    if (isRifornimento && !rifornimento.foto) {
-      alert("Inserisci la foto dello scontrino");
-      return false;
-    }
-
-    return true;
-  }
-
-  // =========================
-  // EXPORT
-  // =========================
-  function exportGiornaliero() {
-    const oggi = new Date().toISOString().split("T")[0];
-
-    const dataFiltrata = dati.filter(
-      (r) => new Date(r.data).toISOString().split("T")[0] === oggi
-    );
-
-    esportaExcel("REPORT_GIORNALIERO.xlsx", formatReport(dataFiltrata));
-  }
-
   function exportMensile() {
-    const dataFiltrata = dati.filter((r) => {
-      const d = new Date(r.data);
-      return (
-        d.getMonth() === meseSelezionato &&
-        d.getFullYear() === annoSelezionato
-      );
-    });
-
     esportaExcel(
       `REPORT_${annoSelezionato}_${meseSelezionato + 1}.xlsx`,
-      formatReport(dataFiltrata)
+      filtrati
     );
   }
 
-  function exportRifornimentiGiornaliero() {
-    const oggi = new Date().toISOString().split("T")[0];
-
-    const dataFiltrata = dati.filter(
-      (r) => new Date(r.data).toISOString().split("T")[0] === oggi
-    );
-
-    esportaExcel("RIFORNIMENTI_GIORNALIERI.xlsx", formatRifornimenti(dataFiltrata));
-  }
-
-  function exportRifornimentiMensile() {
-    const dataFiltrata = dati.filter((r) => {
-      const d = new Date(r.data);
-      return (
-        d.getMonth() === meseSelezionato &&
-        d.getFullYear() === annoSelezionato
-      );
-    });
-
-    esportaExcel(
-      `RIFORNIMENTI_${annoSelezionato}_${meseSelezionato + 1}.xlsx`,
-      formatRifornimenti(dataFiltrata)
-    );
-  }
-
-  // =========================
-  // DELETE
-  // =========================
   async function eliminaReport(id: string) {
-    await supabase.from("registri_giornalieri").delete().eq("id", id);
-    setDati((prev) => prev.filter((r) => r.id !== id));
+    const conferma = confirm(
+      "Eliminare questo report?"
+    );
+
+    if (!conferma) return;
+
+    await supabase
+      .from("registri_giornalieri")
+      .delete()
+      .eq("id", id);
+
+    setDati((prev) =>
+      prev.filter((r) => r.id !== id)
+    );
   }
 
   async function eliminaFiltrati() {
+    if (
+      !confirm(
+        `Eliminare ${filtrati.length} report?`
+      )
+    )
+      return;
+
     const ids = filtrati.map((r) => r.id);
 
-    await supabase.from("registri_giornalieri").delete().in("id", ids);
+    await supabase
+      .from("registri_giornalieri")
+      .delete()
+      .in("id", ids);
 
-    setDati((prev) => prev.filter((r) => !ids.includes(r.id)));
+    setDati((prev) =>
+      prev.filter((r) => !ids.includes(r.id))
+    );
   }
 
-  // =========================
-  // UI
-  // =========================
   return (
     <div style={{ padding: 20 }}>
       <h2>📊 Dashboard Flotta</h2>
 
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            border: "1px solid #ddd",
+            padding: 15,
+          }}
+        >
+          🚚 Km Totali
+          <h3>{kmTotali}</h3>
+        </div>
+
+        <div
+          style={{
+            border: "1px solid #ddd",
+            padding: 15,
+          }}
+        >
+          ⛽ Litri Totali
+          <h3>{litriTotali.toFixed(2)}</h3>
+        </div>
+
+        <div
+          style={{
+            border: "1px solid #ddd",
+            padding: 15,
+          }}
+        >
+          💶 Spesa Totale
+          <h3>€ {spesaTotale.toFixed(2)}</h3>
+        </div>
+
+        <div
+          style={{
+            border: "1px solid #ddd",
+            padding: 15,
+          }}
+        >
+          📈 Km/L
+          <h3>{consumoMedio}</h3>
+        </div>
+      </div>
+
       <input
         placeholder="Cerca autista o targa"
         value={filtro}
-        onChange={(e) => setFiltro(e.target.value)}
-        style={{ padding: 10, width: "100%", marginBottom: 10 }}
+        onChange={(e) =>
+          setFiltro(e.target.value)
+        }
+        style={{
+          width: "100%",
+          padding: 10,
+          marginBottom: 10,
+        }}
       />
 
-      {/* FILTRI DATA */}
-      <div style={{ marginBottom: 10 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+          marginBottom: 20,
+        }}
+      >
         <input
           type="date"
           value={giornoSelezionato}
-          onChange={(e) => setGiornoSelezionato(e.target.value)}
+          onChange={(e) =>
+            setGiornoSelezionato(
+              e.target.value
+            )
+          }
         />
 
         <select
           value={meseSelezionato}
-          onChange={(e) => setMeseSelezionato(Number(e.target.value))}
+          onChange={(e) =>
+            setMeseSelezionato(
+              Number(e.target.value)
+            )
+          }
         >
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({
+            length: 12,
+          }).map((_, i) => (
             <option key={i} value={i}>
               Mese {i + 1}
             </option>
@@ -225,57 +240,79 @@ export default function Dashboard() {
         <input
           type="number"
           value={annoSelezionato}
-          onChange={(e) => setAnnoSelezionato(Number(e.target.value))}
-          style={{ width: 100 }}
+          onChange={(e) =>
+            setAnnoSelezionato(
+              Number(e.target.value)
+            )
+          }
         />
+
+        <button onClick={exportMensile}>
+          📥 Excel
+        </button>
+
+        <button
+          onClick={eliminaFiltrati}
+          style={{
+            background: "red",
+            color: "white",
+          }}
+        >
+          🗑 Elimina Filtrati
+        </button>
       </div>
-
-      {/* NUOVI CAMPI RIFORNIMENTO */}
-      <input
-        type="number"
-        placeholder="Km Rifornimento"
-        value={kmRifornimento}
-        onChange={(e) => setKmRifornimento(e.target.value)}
-        style={{ marginBottom: 10, padding: 10 }}
-      />
-
-      {Number(kmRifornimento) > 0 && (
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFoto(e.target.files?.[0] || null)}
-          style={{ marginBottom: 10 }}
-        />
-      )}
-
-      {/* BOTTONI */}
-      <button onClick={exportGiornaliero}>📊 Giornaliero</button>
-      <button onClick={exportMensile}>📊 Mensile</button>
-      <button onClick={exportRifornimentiGiornaliero}>⛽ Riforn. Giorno</button>
-      <button onClick={exportRifornimentiMensile}>⛽ Riforn. Mese</button>
-
-      <button onClick={eliminaFiltrati} style={{ color: "red", marginLeft: 10 }}>
-        🗑 Elimina Filtrati
-      </button>
 
       <hr />
 
-      {/* LISTA */}
       {loading && <p>Caricamento...</p>}
 
       {filtrati.map((r) => (
         <div
           key={r.id}
-          style={{ padding: 10, border: "1px solid #ddd", marginBottom: 8 }}
+          style={{
+            border: "1px solid #ddd",
+            padding: 10,
+            marginBottom: 10,
+          }}
         >
-          <b>{r.nome_autista}</b> - {r.targa}
+          <b>{r.nome_autista || "-"}</b>
+
           <br />
-          Km: {r.km_inizio} → {r.km_fine} | ⛽ {r.litri}L | € {r.importo_carburante}
+
+          🚚 {r.targa || "-"}
+
+          <br />
+
+          Km: {r.km_inizio} → {r.km_fine}
+
+          <br />
+
+          ⛽ {r.litri || 0} L
+
+          <br />
+
+          💶 € {r.importo_carburante || 0}
+
+          <br />
+
+          📅{" "}
+          {r.data
+            ? new Date(
+                r.data
+              ).toLocaleString()
+            : "-"}
+
           <br />
 
           <button
-            onClick={() => eliminaReport(r.id)}
-            style={{ background: "red", color: "white", marginTop: 5 }}
+            onClick={() =>
+              eliminaReport(r.id)
+            }
+            style={{
+              background: "red",
+              color: "white",
+              marginTop: 8,
+            }}
           >
             🗑 Elimina
           </button>
