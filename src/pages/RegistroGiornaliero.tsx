@@ -19,7 +19,7 @@ export default function RegistroGiornaliero() {
 
   const [msg, setMsg] = useState("");
 
-  // ✔ USATO CORRETTAMENTE (fix TS6133)
+  // ✔ USATO CORRETTAMENTE
   const mezziList = [
     "HB881JF",
     "HB232JH",
@@ -71,13 +71,11 @@ export default function RegistroGiornaliero() {
   async function invia() {
     setMsg("");
 
-    // 🚚 KM INIZIO OBBLIGATORIO
     if (!kmInizio.trim()) {
       setMsg("❌ Inserire i Km Inizio");
       return;
     }
 
-    // 🚚 KM FINE OBBLIGATORIO
     if (!kmFine.trim()) {
       setMsg("❌ Inserire i Km Fine");
       return;
@@ -102,7 +100,6 @@ export default function RegistroGiornaliero() {
       return;
     }
 
-    // ⛽ BLOCCO RIFORNIMENTO
     if (rifornimento) {
       if (!kmRifornimento.trim()) {
         setMsg("❌ Inserire Km rifornimento");
@@ -131,7 +128,6 @@ export default function RegistroGiornaliero() {
       let urlKm = "";
       let urlScontrino = "";
 
-      // 📸 FOTO KM SEMPRE OPZIONALE
       if (fotoKm) {
         urlKm = await uploadFile(fotoKm, "km");
       }
@@ -144,6 +140,7 @@ export default function RegistroGiornaliero() {
         username: local.username,
         nome_autista: local.nome,
 
+        // 🚚 QUI È LA FUNZIONE MEZZO ALTERNATIVO (GIÀ PERFETTA)
         targa:
           usaAlternativo && targaAlternativa
             ? targaAlternativa
@@ -173,7 +170,6 @@ export default function RegistroGiornaliero() {
 
       setMsg("✅ Registro salvato correttamente");
 
-      // reset
       setKmInizio("");
       setKmFine("");
       setKmRifornimento("");
@@ -195,6 +191,16 @@ export default function RegistroGiornaliero() {
       <p>
         <b>Mezzo assegnato:</b> {targa || "Caricamento..."}
       </p>
+
+      {/* ✅ NUOVA FUNZIONE AGGIUNTA */}
+      <label>
+        <input
+          type="checkbox"
+          checked={usaAlternativo}
+          onChange={(e) => setUsaAlternativo(e.target.checked)}
+        />
+        {" "}Usa mezzo alternativo
+      </label>
 
       {usaAlternativo && (
         <select
