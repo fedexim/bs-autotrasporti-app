@@ -12,6 +12,10 @@ export default function Dashboard() {
   const [meseSelezionato, setMeseSelezionato] = useState(new Date().getMonth());
   const [annoSelezionato, setAnnoSelezionato] = useState(new Date().getFullYear());
 
+  // NUOVI CAMPI
+  const [kmRifornimento, setKmRifornimento] = useState("");
+  const [foto, setFoto] = useState<File | null>(null);
+
   // =========================
   // CARICA DATI
   // =========================
@@ -33,7 +37,7 @@ export default function Dashboard() {
   }, []);
 
   // =========================
-  // FILTRO COMPLETO
+  // FILTRO
   // =========================
   const filtrati = dati.filter((r) => {
     const d = new Date(r.data);
@@ -63,15 +67,13 @@ export default function Dashboard() {
     XLSX.writeFile(wb, nome);
   }
 
-  // =========================
-  // FORMAT REPORT (MODIFICATO OPZIONE B)
-  // =========================
   function formatReport(data: any[]) {
     return data.map((r) => ({
       Autista: r.nome_autista,
       Targa: r.targa,
       "Km Inizio": r.km_inizio,
       "Km Fine": r.km_fine,
+      "Km Rifornimento": r.km_rifornimento,
       Litri: r.litri,
       Importo: r.importo_carburante,
       Data: r.data ? new Date(r.data).toLocaleString() : ""
@@ -82,10 +84,40 @@ export default function Dashboard() {
     return data.map((r) => ({
       Autista: r.nome_autista,
       Targa: r.targa,
+      Km: r.km_rifornimento,
       Litri: r.litri,
       Importo: r.importo_carburante,
       Data: r.data ? new Date(r.data).toLocaleString() : ""
     }));
+  }
+
+  // =========================
+  // VALIDAZIONE (OBBLIGO CAMPI)
+  // =========================
+  function validaInvio(rifornimento: any) {
+    const isRifornimento = Number(rifornimento.litri) > 0;
+
+    if (
+      !rifornimento.nome_autista ||
+      !rifornimento.targa ||
+      !rifornimento.km_inizio ||
+      !rifornimento.km_fine
+    ) {
+      alert("Compila tutti i campi obbligatori");
+      return false;
+    }
+
+    if (isRifornimento && !rifornimento.km_rifornimento) {
+      alert("Inserisci i km al rifornimento");
+      return false;
+    }
+
+    if (isRifornimento && !rifornimento.foto) {
+      alert("Inserisci la foto dello scontrino");
+      return false;
+    }
+
+    return true;
   }
 
   // =========================
@@ -164,7 +196,6 @@ export default function Dashboard() {
     <div style={{ padding: 20 }}>
       <h2>📊 Dashboard Flotta</h2>
 
-      {/* FILTRO */}
       <input
         placeholder="Cerca autista o targa"
         value={filtro}
@@ -172,16 +203,14 @@ export default function Dashboard() {
         style={{ padding: 10, width: "100%", marginBottom: 10 }}
       />
 
-      {/* GIORNO */}
-      <input
-        type="date"
-        value={giornoSelezionato}
-        onChange={(e) => setGiornoSelezionato(e.target.value)}
-        style={{ padding: 10, marginBottom: 10 }}
-      />
-
-      {/* MESE ANNO */}
+      {/* FILTRI DATA */}
       <div style={{ marginBottom: 10 }}>
+        <input
+          type="date"
+          value={giornoSelezionato}
+          onChange={(e) => setGiornoSelezionato(e.target.value)}
+        />
+
         <select
           value={meseSelezionato}
           onChange={(e) => setMeseSelezionato(Number(e.target.value))}
@@ -197,9 +226,27 @@ export default function Dashboard() {
           type="number"
           value={annoSelezionato}
           onChange={(e) => setAnnoSelezionato(Number(e.target.value))}
-          style={{ marginLeft: 10, width: 100 }}
+          style={{ width: 100 }}
         />
       </div>
+
+      {/* NUOVI CAMPI RIFORNIMENTO */}
+      <input
+        type="number"
+        placeholder="Km Rifornimento"
+        value={kmRifornimento}
+        onChange={(e) => setKmRifornimento(e.target.value)}
+        style={{ marginBottom: 10, padding: 10 }}
+      />
+
+      {Number(kmRifornimento) > 0 && (
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setFoto(e.target.files?.[0] || null)}
+          style={{ marginBottom: 10 }}
+        />
+      )}
 
       {/* BOTTONI */}
       <button onClick={exportGiornaliero}>📊 Giornaliero</button>
@@ -224,7 +271,6 @@ export default function Dashboard() {
           <b>{r.nome_autista}</b> - {r.targa}
           <br />
           Km: {r.km_inizio} → {r.km_fine} | ⛽ {r.litri}L | € {r.importo_carburante}
-
           <br />
 
           <button
