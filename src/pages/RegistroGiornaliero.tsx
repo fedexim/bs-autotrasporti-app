@@ -44,6 +44,7 @@ export default function RegistroGiornaliero() {
 
       if (!local.username) return;
 
+      // 🟢 1. mezzo principale (TUO CODICE ORIGINALE)
       const { data } = await supabase
         .from("autisti")
         .select("mezzo_principale")
@@ -51,6 +52,21 @@ export default function RegistroGiornaliero() {
         .single();
 
       setTarga(data?.mezzo_principale || "");
+
+      // 🟢 2. AGGIUNTA: km automatici ultimo utilizzo mezzo
+      if (data?.mezzo_principale) {
+        const { data: ultimo } = await supabase
+          .from("registri_giornalieri")
+          .select("km_fine")
+          .eq("targa", data.mezzo_principale)
+          .order("data", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (ultimo?.km_fine) {
+          setKmInizio(String(ultimo.km_fine));
+        }
+      }
     }
 
     load();
@@ -140,7 +156,6 @@ export default function RegistroGiornaliero() {
         username: local.username,
         nome_autista: local.nome,
 
-        // 🚚 QUI È LA FUNZIONE MEZZO ALTERNATIVO (GIÀ PERFETTA)
         targa:
           usaAlternativo && targaAlternativa
             ? targaAlternativa
@@ -160,7 +175,8 @@ export default function RegistroGiornaliero() {
         foto_km: urlKm || null,
         foto_scontrino: urlScontrino || null,
 
-        data: new Date(),
+        // 🟢 MODIFICA IMPORTANTE: data corretta
+        data: new Date().toISOString(),
       });
 
       if (error) {
@@ -192,7 +208,6 @@ export default function RegistroGiornaliero() {
         <b>Mezzo assegnato:</b> {targa || "Caricamento..."}
       </p>
 
-      {/* ✅ NUOVA FUNZIONE AGGIUNTA */}
       <label>
         <input
           type="checkbox"
