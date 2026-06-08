@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import Login from "./pages/Login";
 import RegistroGiornaliero from "./pages/RegistroGiornaliero";
 import Dashboard from "./pages/Dashboard";
+import CambiaPassword from "./pages/CambiaPassword";
 
 export default function App() {
   const [autista, setAutista] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [pagina, setPagina] = useState("home");
 
   useEffect(() => {
     const saved = localStorage.getItem("autista");
@@ -28,18 +30,13 @@ export default function App() {
   }
 
   if (loading) {
-    return (
-      <div style={{ padding: 30, textAlign: "center" }}>
-        Caricamento...
-      </div>
-    );
+    return <div style={{ padding: 30, textAlign: "center" }}>Caricamento...</div>;
   }
 
   if (!autista) {
     return <Login />;
   }
 
-  // 🟢 CONTROLLO RUOLO (NUOVO SISTEMA)
   const isAdmin = autista.ruolo === "admin";
 
   return (
@@ -58,31 +55,44 @@ export default function App() {
         <div>
           👤 {autista.nome}
 
-          {autista.targa && (
-            <> - 🚚 {autista.targa}</>
-          )}
+          {autista.targa && <> - 🚚 {autista.targa}</>}
 
-          {isAdmin && (
-            <> (Amministratore)</>
-          )}
+          {isAdmin && <> (Amministratore)</>}
         </div>
 
-        <button
-          onClick={logout}
-          style={{
-            background: "white",
-            border: "none",
-            borderRadius: 4,
-            padding: "8px 12px",
-            cursor: "pointer",
-          }}
-        >
-          Logout
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => setPagina("password")}
+            style={{
+              background: "white",
+              border: "none",
+              borderRadius: 4,
+              padding: "6px 10px",
+              cursor: "pointer",
+            }}
+          >
+            🔐 Password
+          </button>
+
+          <button
+            onClick={logout}
+            style={{
+              background: "white",
+              border: "none",
+              borderRadius: 4,
+              padding: "6px 10px",
+              cursor: "pointer",
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
-      {/* CONTENUTO PRINCIPALE */}
-      {isAdmin ? (
+      {/* PAGINE */}
+      {pagina === "password" ? (
+        <CambiaPassword />
+      ) : isAdmin ? (
         <Dashboard />
       ) : (
         <RegistroGiornaliero />
