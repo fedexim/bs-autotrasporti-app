@@ -29,12 +29,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          padding: 30,
-          textAlign: "center",
-        }}
-      >
+      <div style={{ padding: 30, textAlign: "center" }}>
         Caricamento...
       </div>
     );
@@ -43,6 +38,9 @@ export default function App() {
   if (!autista) {
     return <Login />;
   }
+
+  // 🟢 CONTROLLO RUOLO (NUOVO SISTEMA)
+  const isAdmin = autista.ruolo === "admin";
 
   return (
     <div>
@@ -64,7 +62,7 @@ export default function App() {
             <> - 🚚 {autista.targa}</>
           )}
 
-          {autista.username === "admin" && (
+          {isAdmin && (
             <> (Amministratore)</>
           )}
         </div>
@@ -83,8 +81,8 @@ export default function App() {
         </button>
       </div>
 
-      {/* RUOLI */}
-      {autista.username === "admin" ? (
+      {/* CONTENUTO PRINCIPALE */}
+      {isAdmin ? (
         <Dashboard />
       ) : (
         <RegistroGiornaliero />

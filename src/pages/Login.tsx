@@ -44,12 +44,19 @@ export default function Login() {
         return;
       }
 
+      // 🟢 SALVATAGGIO COMPLETO UTENTE
       localStorage.setItem(
         "autista",
         JSON.stringify({
+          id: user.id,
           username: user.username,
           nome: user.nome,
+          targa: user.mezzo_principale,
           mezzo_principale: user.mezzo_principale,
+          mezzo_alternativo: user.mezzo_alternativo,
+
+          // 🆕 AGGIUNTO: ruolo (DEFAULT autista)
+          ruolo: user.ruolo || "autista",
         })
       );
 
