@@ -19,7 +19,6 @@ export default function RegistroGiornaliero() {
 
   const [msg, setMsg] = useState("");
 
-  // ✔ USATO CORRETTAMENTE
   const mezziList = [
     "HB881JF",
     "HB232JH",
@@ -44,7 +43,6 @@ export default function RegistroGiornaliero() {
 
       if (!local.username) return;
 
-      // 🟢 1. mezzo principale (TUO CODICE ORIGINALE)
       const { data } = await supabase
         .from("autisti")
         .select("mezzo_principale")
@@ -53,7 +51,6 @@ export default function RegistroGiornaliero() {
 
       setTarga(data?.mezzo_principale || "");
 
-      // 🟢 2. AGGIUNTA: km automatici ultimo utilizzo mezzo
       if (data?.mezzo_principale) {
         const { data: ultimo } = await supabase
           .from("registri_giornalieri")
@@ -87,24 +84,15 @@ export default function RegistroGiornaliero() {
   async function invia() {
     setMsg("");
 
-    if (!kmInizio.trim()) {
-      setMsg("❌ Inserire i Km Inizio");
-      return;
-    }
-
-    if (!kmFine.trim()) {
-      setMsg("❌ Inserire i Km Fine");
-      return;
-    }
+    if (!kmInizio.trim()) return setMsg("❌ Inserire i Km Inizio");
+    if (!kmFine.trim()) return setMsg("❌ Inserire i Km Fine");
 
     if (Number(kmFine) <= Number(kmInizio)) {
-      setMsg("❌ Km Fine deve essere maggiore di Km Inizio");
-      return;
+      return setMsg("❌ Km Fine deve essere maggiore di Km Inizio");
     }
 
     if (usaAlternativo && !targaAlternativa) {
-      setMsg("❌ Selezionare mezzo alternativo");
-      return;
+      return setMsg("❌ Selezionare mezzo alternativo");
     }
 
     const haLitri = litri.trim() !== "";
@@ -112,27 +100,18 @@ export default function RegistroGiornaliero() {
     const rifornimento = haLitri || haImporto;
 
     if (haLitri !== haImporto) {
-      setMsg("❌ Inserire sia litri che importo");
-      return;
+      return setMsg("❌ Inserire sia litri che importo");
     }
 
     if (rifornimento) {
-      if (!kmRifornimento.trim()) {
-        setMsg("❌ Inserire Km rifornimento");
-        return;
-      }
-
-      if (!fotoScontrino) {
-        setMsg("❌ Caricare scontrino carburante");
-        return;
-      }
+      if (!kmRifornimento.trim()) return setMsg("❌ Inserire Km rifornimento");
+      if (!fotoScontrino) return setMsg("❌ Caricare scontrino carburante");
 
       if (
         Number(kmRifornimento) < Number(kmInizio) ||
         Number(kmRifornimento) > Number(kmFine)
       ) {
-        setMsg("❌ Km rifornimento non valido");
-        return;
+        return setMsg("❌ Km rifornimento non valido");
       }
     }
 
@@ -151,6 +130,9 @@ export default function RegistroGiornaliero() {
       if (fotoScontrino) {
         urlScontrino = await uploadFile(fotoScontrino, "scontrini");
       }
+
+      // 🟢 FIX: SOLO DATA (NO ORARIO)
+      const oggi = new Date().toLocaleDateString("it-IT");
 
       const { error } = await supabase.from("registri_giornalieri").insert({
         username: local.username,
@@ -175,8 +157,8 @@ export default function RegistroGiornaliero() {
         foto_km: urlKm || null,
         foto_scontrino: urlScontrino || null,
 
-        // 🟢 MODIFICA IMPORTANTE: data corretta
-        data: new Date().toISOString(),
+        // 🟢 SOLO DATA
+        data: oggi,
       });
 
       if (error) {
