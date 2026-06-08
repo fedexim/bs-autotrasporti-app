@@ -36,13 +36,14 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  // ⚠️ AUTISTI NON COMPILATI OGGI
+  // ⚠️ AUTISTI NON COMPILATI OGGI (FIX: esclusi admin)
   async function checkNonCompilati() {
     const oggi = new Date().toISOString().split("T")[0];
 
     const { data: autisti } = await supabase
       .from("autisti")
-      .select("username, nome");
+      .select("username, nome, ruolo")
+      .eq("ruolo", "autista"); // 🔥 FIX IMPORTANTE
 
     const { data: registri } = await supabase
       .from("registri_giornalieri")
@@ -145,7 +146,7 @@ export default function Dashboard() {
     );
   }
 
-  // ⛽ RIFORNIMENTI GIORNALIERI (NUOVO - AGGIUNTO)
+  // ⛽ RIFORNIMENTI GIORNALIERI
   function exportRifornimentiGiornalieri() {
     const data = filtrati
       .filter((r) => r.litri || r.importo_carburante)
@@ -164,7 +165,7 @@ export default function Dashboard() {
     );
   }
 
-  // 📆 RIFORNIMENTI MENSILI (NUOVO - AGGIUNTO)
+  // 📆 RIFORNIMENTI MENSILI
   function exportRifornimentiMensili() {
     const data = dati
       .filter((r) => {
@@ -211,7 +212,6 @@ export default function Dashboard() {
     setDati((prev) => prev.filter((r) => !ids.includes(r.id)));
   }
 
-  // ⏳ FIX VERCEL (loading dichiarato ma non usato)
   if (loading) {
     return <p style={{ padding: 20 }}>⏳ Caricamento dati...</p>;
   }
@@ -276,15 +276,8 @@ export default function Dashboard() {
       {/* 📦 EXPORT */}
       <button onClick={exportGiornaliero}>📊 Giornaliero</button>
       <button onClick={exportMensile}>📅 Mensile</button>
-
-      {/* ⛽ NUOVI EXPORT RIFORNIMENTI */}
-      <button onClick={exportRifornimentiGiornalieri}>
-        ⛽ Rif. Giornalieri
-      </button>
-
-      <button onClick={exportRifornimentiMensili}>
-        📆 Rif. Mensili
-      </button>
+      <button onClick={exportRifornimentiGiornalieri}>⛽ Rif. Giornalieri</button>
+      <button onClick={exportRifornimentiMensili}>📆 Rif. Mensili</button>
 
       <button
         onClick={eliminaFiltrati}
