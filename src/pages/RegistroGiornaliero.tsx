@@ -33,7 +33,7 @@ export default function RegistroGiornaliero() {
     "HB857JF",
     "HB873JF",
     "HB862JF",
-    "HB203JH",
+    "HB203JG",
     "GR701EP",
     "HA141WX",
   ];
